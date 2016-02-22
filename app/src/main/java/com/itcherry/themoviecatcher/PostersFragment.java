@@ -2,12 +2,14 @@ package com.itcherry.themoviecatcher;
 
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
@@ -35,7 +37,19 @@ public class PostersFragment extends Fragment {
         // Inflate the layout for this fragment
         View v = inflater.inflate(R.layout.fragment_posters, container, false);
         GridView gridView = (GridView) v.findViewById(R.id.grid_layout);
-        gridView.setAdapter(new ImageAdapter(getActivity()));
+        final ImageAdapter adapter = new ImageAdapter(getActivity());
+        gridView.setAdapter(adapter);
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent intent = new Intent(getActivity(),DetailActivity.class)
+                        .putExtra(
+                                getString(R.string.movie_id),
+                                String.valueOf(adapter.mMovies.get(position).getId()))
+                        .putExtra(getString(R.string.movie_desctiption), adapter.mMovies.get(position));
+                startActivity(intent);
+            }
+        });
         return v;
     }
 
@@ -43,8 +57,8 @@ public class PostersFragment extends Fragment {
     public class ImageAdapter extends BaseAdapter {
         private final String LOG_TAG = getActivity().getClass().getSimpleName();
         private Context mContext;
-        private ArrayList<MovieDescription> mMovies = null;
-        ArrayList<ImageView> images;
+        ArrayList<MovieDescription> mMovies = null;
+        private ArrayList<ImageView> images;
 
         public ImageAdapter(Context c) {
             mContext = c;
@@ -94,7 +108,6 @@ public class PostersFragment extends Fragment {
                                 ViewGroup.LayoutParams.MATCH_PARENT)
                 );
                 imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                //imageView.setPadding(8, 8, 8, 8);
             } else {
                 imageView = (ImageView) convertView;
             }

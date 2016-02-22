@@ -3,4 +3,9 @@
 
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="menu_settings_label">Settings</string>
+    <string name="movie_id">movie_id</string>
+    <string name="movie_desctiption">movie_description</string>
+    <string name="detail_frag_description">Description :</string>
+    <string name="release_date">Release date :</string>
+    <string name="rate">Rate : </string>
 </resources>

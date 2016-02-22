@@ -14,67 +14,45 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 
-public class FetchMovieTask extends AsyncTask<String, Void, ArrayList<MovieDescription>> {
+
+public class FetchBackdropsTask extends AsyncTask<String, Void, String[]> {
     private final String LOG_TAG = getClass().getSimpleName();
 
-    private ArrayList<MovieDescription> getMoviesFromJsonString(String postersJsonStr){
+    private String[] getBackdropsFromJsonString(String postersJsonStr) {
 
-        final String RESULTS_ARRAY = "results";
-        final String POSTER_IMAGE_URL = "poster_path";
-        final String POSTER_OVERVIEW = "overview";
-        final String POSTER_RELEASE_DATE = "release_date";
-        final String POSTER_ID = "id";
-        final String POSTER_TITLE = "title";
-        final String POSTER_VOTE_COUNT = "vote_count";
-        final String POSTER_VOTE_AVERAGE = "vote_average";
+        final String RESULTS_ARRAY = "backdrops";
+        final String BACKDROPS_PATH = "file_path";
 
-        ArrayList<MovieDescription> result = new ArrayList<>();
-        MovieDescription movie;
+        String[] result = null;
         try {
             JSONObject jsonObject = new JSONObject(postersJsonStr);
             JSONArray results = jsonObject.getJSONArray(RESULTS_ARRAY);
 
             JSONObject object;
-
+            result = new String[results.length()];
             for (int i = 0; i < results.length(); i++) {
                 object = results.getJSONObject(i);
-                movie = new MovieDescription(
-                        object.getInt(POSTER_ID),
-                        object.getInt(POSTER_VOTE_COUNT),
-                        object.getString(POSTER_TITLE),
-                        object.getDouble(POSTER_VOTE_AVERAGE),
-                        object.getString(POSTER_RELEASE_DATE),
-                        object.getString(POSTER_IMAGE_URL),
-                        object.getString(POSTER_OVERVIEW)
-                        );
-                result.add(movie);
+                result[i] = object.getString(BACKDROPS_PATH);
             }
         } catch (JSONException e) {
-            Log.e(LOG_TAG,e.getMessage());
+            Log.e(LOG_TAG, e.getMessage());
         }
         return result;
     }
+
     @Override
-    protected ArrayList<MovieDescription> doInBackground(String... params) {
+    protected String[] doInBackground(String... params) {
         if (params[0] == null) return null;
-        String postersJsonStr = null;
+        String backdropsJsonStr = null;
         HttpURLConnection urlConnection = null;
         BufferedReader reader = null;
-        ArrayList<MovieDescription> movies;
 
-        final String MOVIE_BASE_URL = "http://api.themoviedb.org/3/movie/" + params[0] + "?";
-        final String MOVIE_BACKDROPS_URL = "http://api.themoviedb.org/3/movie/" + "/images?";
-        /*final String POPULAR = "popular?";
-        final String TOP_RATED = "top_rated?";*/
+        final String MOVIE_BACKDROPS_URL = "http://api.themoviedb.org/3/movie/" + params[0] + "/images?";
         final String API_KEY = "api_key";
-        final String SORTING = "sort_by";
-
 
         try {
-            Uri uri = Uri.parse(MOVIE_BASE_URL).buildUpon()
-                    .appendQueryParameter(SORTING, "vote_average.desc")
+            Uri uri = Uri.parse(MOVIE_BACKDROPS_URL).buildUpon()
                     .appendQueryParameter(API_KEY, "277455b8532b51d0dd24b2446e50a0ad")
                     .build();
 
@@ -104,7 +82,7 @@ public class FetchMovieTask extends AsyncTask<String, Void, ArrayList<MovieDescr
                 // Stream was empty.  No point in parsing.
                 return null;
             }
-            postersJsonStr = buffer.toString();
+            backdropsJsonStr = buffer.toString();
 
         } catch (IOException e) {
             Log.e(LOG_TAG, e.getMessage());
@@ -121,5 +99,7 @@ public class FetchMovieTask extends AsyncTask<String, Void, ArrayList<MovieDescr
                 }
             }
         }
-        return getMoviesFromJsonString(postersJsonStr);    }
+        return getBackdropsFromJsonString(backdropsJsonStr);
+    }
 }
+
