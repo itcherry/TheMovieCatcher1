@@ -4,13 +4,18 @@ package com.itcherry.themoviecatcher;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
+
+import com.squareup.picasso.Picasso;
+
+import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 
 
 /**
@@ -30,26 +35,43 @@ public class PostersFragment extends Fragment {
         // Inflate the layout for this fragment
         View v = inflater.inflate(R.layout.fragment_posters, container, false);
         GridView gridView = (GridView) v.findViewById(R.id.grid_layout);
-        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-
-            }
-        });
-        ImageAdapter ia = new ImageAdapter(getActivity());
+        gridView.setAdapter(new ImageAdapter(getActivity()));
         return v;
     }
 
 
     public class ImageAdapter extends BaseAdapter {
+        private final String LOG_TAG = getActivity().getClass().getSimpleName();
         private Context mContext;
+        private ArrayList<MovieDescription> mMovies = null;
+        ArrayList<ImageView> images;
 
         public ImageAdapter(Context c) {
             mContext = c;
+            final String URL_PICTURE = "http://image.tmdb.org/t/p/w500/";
+
+            try {
+                mMovies = new FetchMovieTask().execute("popular?").get();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+
+            if (mMovies != null) {
+                images = new ArrayList<>();
+                ImageView vi;
+                for (int i = 0; i < mMovies.size(); i++) {
+                    vi = new ImageView(getActivity());
+                    Picasso.with(mContext).load(URL_PICTURE + mMovies.get(i).getImageUrl()).into(vi);
+                    images.add(vi);
+                }
+            } else Log.e(LOG_TAG, "Null pointer exception when loading pictures from TMDB");
         }
 
         public int getCount() {
-            return 0;//mThumbIds.length;
+            return mMovies.size();
         }
 
         public Object getItem(int position) {
@@ -62,20 +84,21 @@ public class PostersFragment extends Fragment {
 
         // create a new ImageView for each item referenced by the Adapter
         public View getView(int position, View convertView, ViewGroup parent) {
+
             ImageView imageView;
             if (convertView == null) {
                 // if it's not recycled, initialize some attributes
                 imageView = new ImageView(mContext);
                 imageView.setLayoutParams(new GridView.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT)
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT)
                 );
-                imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                imageView.setPadding(8, 8, 8, 8);
+                imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                //imageView.setPadding(8, 8, 8, 8);
             } else {
                 imageView = (ImageView) convertView;
             }
-            //imageView.setImageResource(mThumbIds[position]);
+            imageView = images.get(position);
             return imageView;
         }
     }

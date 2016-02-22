@@ -14,28 +14,42 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.HashMap;
+import java.util.ArrayList;
 
-public class FetchMovieTask extends AsyncTask<String, Void, HashMap<Integer,String>> {
+public class FetchMovieTask extends AsyncTask<String, Void, ArrayList<MovieDescription>> {
     private final String LOG_TAG = getClass().getSimpleName();
 
-    private HashMap<Integer,String> getImagesFromJsonString(String postersJsonStr){
+    private ArrayList<MovieDescription> getImagesFromJsonString(String postersJsonStr){
 
         final String RESULTS_ARRAY = "results";
-        final String POSTER_PATH = "poster_path";
+        final String POSTER_IMAGE_URL = "poster_path";
+        final String POSTER_OVERVIEW = "overview";
+        final String POSTER_RELEASE_DATE = "release_date";
+        final String POSTER_ID = "id";
+        final String POSTER_TITLE = "title";
+        final String POSTER_VOTE_COUNT = "vote_count";
+        final String POSTER_VOTE_AVERAGE = "vote_average";
 
-        HashMap<Integer,String> result = new HashMap<>();
+        ArrayList<MovieDescription> result = new ArrayList<>();
+        MovieDescription movie;
         try {
             JSONObject jsonObject = new JSONObject(postersJsonStr);
             JSONArray results = jsonObject.getJSONArray(RESULTS_ARRAY);
-            JSONObject posterPath;
-            String  posterImages;
-            int posterIds;
-            for (int i = 0; i <results.length(); i++) {
-                posterPath = results.getJSONObject(i);
-                posterImages = posterPath.getString(POSTER_PATH);
-                posterIds = posterPath.getInt("id");
-                result.put(posterIds,posterImages);
+
+            JSONObject object;
+
+            for (int i = 0; i < results.length(); i++) {
+                object = results.getJSONObject(i);
+                movie = new MovieDescription(
+                        object.getInt(POSTER_ID),
+                        object.getInt(POSTER_VOTE_COUNT),
+                        object.getString(POSTER_TITLE),
+                        object.getDouble(POSTER_VOTE_AVERAGE),
+                        object.getString(POSTER_RELEASE_DATE),
+                        object.getString(POSTER_IMAGE_URL),
+                        object.getString(POSTER_OVERVIEW)
+                        );
+                result.add(movie);
             }
         } catch (JSONException e) {
             Log.e(LOG_TAG,e.getMessage());
@@ -43,7 +57,7 @@ public class FetchMovieTask extends AsyncTask<String, Void, HashMap<Integer,Stri
         return result;
     }
     @Override
-    protected HashMap<Integer,String> doInBackground(String... params) {
+    protected ArrayList<MovieDescription> doInBackground(String... params) {
         if (params[0] == null) return null;
         String postersJsonStr = null;
         HttpURLConnection urlConnection = null;
@@ -103,6 +117,7 @@ public class FetchMovieTask extends AsyncTask<String, Void, HashMap<Integer,Stri
                 }
             }
         }
-        return null;
+
+        return getImagesFromJsonString(postersJsonStr);
     }
 }
