@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/StartAppInApp-3.5.0/StartAppInApp-3.5.0.iml" filepath="$PROJECT_DIR$/StartAppInApp-3.5.0/StartAppInApp-3.5.0.iml" />
       <module fileurl="file://$PROJECT_DIR$/TheMovieCatcher.iml" filepath="$PROJECT_DIR$/TheMovieCatcher.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android-ad-sdk/android-ad-sdk.iml" filepath="$PROJECT_DIR$/android-ad-sdk/android-ad-sdk.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>

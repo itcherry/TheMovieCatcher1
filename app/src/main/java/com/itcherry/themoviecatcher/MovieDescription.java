@@ -3,24 +3,23 @@ package com.itcherry.themoviecatcher;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-/**
- * Created by Dron on 22-Feb-16.
- */
 public class MovieDescription implements Parcelable {
     private String overview;
     private String imageUrl;
     private String releaseDate;
     private String title;
+    private double popularity;
     private double voteAverage;
     private int voteCount;
     private int id;
 
     public MovieDescription(int id, int voteCount, String title,
-                            double voteAverage, String releaseDate,
+                            double voteAverage, double popularity, String releaseDate,
                             String imageUrl, String overview) {
         this.voteCount = voteCount;
         this.title = title;
         this.voteAverage = voteAverage;
+        this.popularity = popularity;
         this.releaseDate = releaseDate;
         this.imageUrl = imageUrl;
         this.overview = overview;
@@ -33,6 +32,7 @@ public class MovieDescription implements Parcelable {
         releaseDate = in.readString();
         title = in.readString();
         voteAverage = in.readDouble();
+        popularity = in.readDouble();
         voteCount = in.readInt();
         id = in.readInt();
     }
@@ -77,6 +77,10 @@ public class MovieDescription implements Parcelable {
         return overview;
     }
 
+    public double getPopularity() {
+        return popularity;
+    }
+
     @Override
     public int describeContents() {
         return 0;
@@ -89,6 +93,7 @@ public class MovieDescription implements Parcelable {
         dest.writeString(releaseDate);
         dest.writeString(title);
         dest.writeDouble(voteAverage);
+        dest.writeDouble(popularity);
         dest.writeInt(voteCount);
         dest.writeInt(id);
     }

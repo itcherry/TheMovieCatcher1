@@ -8,7 +8,6 @@ import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBarActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -28,7 +27,6 @@ public class DetailActivity extends ActionBarActivity {
 
         Intent intent = getIntent();
         String id = intent.getStringExtra(getString(R.string.movie_id));
-        Log.d(LOG_TAG, "id = " + id);
         try {
             backdrops = new FetchBackdropsTask().execute(id).get();
         } catch (InterruptedException e) {

@@ -2,7 +2,6 @@ package com.itcherry.themoviecatcher;
 
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,7 +31,6 @@ public class ViewPagerFragment extends Fragment {
         View v = inflater.inflate(R.layout.fragment_pageview_item, container,false);
         ImageView imageView = (ImageView) v.findViewById(R.id.fragment_imageview_item);
         final String URL_PICTURE = "http://image.tmdb.org/t/p/w500/";
-        Log.d("myLogs",backdrop);
         Picasso.with(getActivity()).load(URL_PICTURE + backdrop).into(imageView);
         return v;
     }

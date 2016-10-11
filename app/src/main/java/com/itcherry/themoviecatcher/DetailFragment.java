@@ -7,7 +7,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ProgressBar;
+import android.widget.RatingBar;
 import android.widget.TextView;
 
 /**
@@ -19,7 +19,7 @@ public class DetailFragment extends Fragment {
     private TextView tvReleaseDate;
     private TextView tvRate;
     private TextView tvCountRate;
-    private ProgressBar progressBar;
+    private RatingBar ratingBar;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -31,18 +31,18 @@ public class DetailFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_detail, container, false);
         tvDesription = (TextView) v.findViewById(R.id.tvTextDescription);
-        tvReleaseDate = (TextView) v.findViewById(R.id.tvTextReleaseDate);
+        tvReleaseDate = (TextView) v.findViewById(R.id.tvReleaseDate);
         tvRate = (TextView) v.findViewById(R.id.tvNumberRate);
-        tvCountRate = (TextView) v.findViewById(R.id.tvCountRate);
-        progressBar = (ProgressBar) v.findViewById(R.id.progressBar);
+        tvCountRate = (TextView) v.findViewById(R.id.tvRate);
+        ratingBar = (RatingBar) v.findViewById(R.id.ratingBar);
 
         tvDesription.setText(movieDescription.getOverview());
-        tvReleaseDate.setText(movieDescription.getReleaseDate());
+        tvReleaseDate.setText(tvReleaseDate.getText() + movieDescription.getReleaseDate());
         tvRate.setText(String.valueOf(movieDescription.getVoteAverage()));
         int rate = (int) movieDescription.getVoteAverage();
-        progressBar.setMax(10);
-        progressBar.setProgress(rate);
-        progressBar.setClickable(false);
+        ratingBar.setNumStars(5);
+        ratingBar.setProgress(rate);
+        ratingBar.setClickable(false);
         //ratingBar.setStepSize(10);
         if (movieDescription.getVoteAverage() >= 6.5 && movieDescription.getVoteAverage() <= 7.7) {
             tvRate.setTextColor(getResources().getColor(R.color.orange));
@@ -51,7 +51,7 @@ public class DetailFragment extends Fragment {
         } else {
             tvRate.setTextColor(getResources().getColor(R.color.red));
         }
-        tvCountRate.setText(String.valueOf(movieDescription.getVoteCount()));
+        tvCountRate.setText(tvCountRate.getText() + String.valueOf(movieDescription.getVoteCount()) + " people rated");
         return v;
     }
 

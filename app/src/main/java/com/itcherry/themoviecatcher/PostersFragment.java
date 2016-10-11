@@ -1,119 +1,117 @@
 package com.itcherry.themoviecatcher;
 
 
-import android.content.Context;
-import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.util.Log;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.BaseAdapter;
 import android.widget.GridView;
-import android.widget.ImageView;
 
-import com.squareup.picasso.Picasso;
+import com.itcherry.themoviecatcher.data.MovieContract;
+import com.itcherry.themoviecatcher.sync.MovieCatcherSyncAdapter;
 
-import java.util.ArrayList;
-import java.util.concurrent.ExecutionException;
-
+import static com.itcherry.themoviecatcher.Utility.getFriendlySortingFromPreferences;
 
 /**
  * A simple {@link Fragment} subclass.
  */
-public class PostersFragment extends Fragment {
-
+public class PostersFragment extends Fragment implements LoaderManager.LoaderCallbacks {
+    private GridView gridView;
+    private ImageAdapter mMovieAdapter;
+    private static final int MY_CURSOR_LOADER_ID = 1;
 
     public PostersFragment() {
         // Required empty public constructor
     }
-
-
+    public interface Callback{
+        public void onItemSelected(Uri uri);
+    }
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View v = inflater.inflate(R.layout.fragment_posters, container, false);
-        GridView gridView = (GridView) v.findViewById(R.id.grid_layout);
-        final ImageAdapter adapter = new ImageAdapter(getActivity());
-        gridView.setAdapter(adapter);
+        gridView = (GridView) v.findViewById(R.id.grid_layout);
+
+        String sortOrder = Utility.getFriendlySortingFromPreferences(getActivity());
+        Uri movieURI = MovieContract.buildMovieSorting(sortOrder);
+        Cursor cursor = (getActivity()).getContentResolver().query(
+                movieURI,
+                null,
+                null,
+                null,
+                sortOrder
+        );
+
+        mMovieAdapter = new ImageAdapter(getActivity(), cursor, false);
+
+        gridView.setAdapter(mMovieAdapter);
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Intent intent = new Intent(getActivity(),DetailActivity.class)
-                        .putExtra(
-                                getString(R.string.movie_id),
-                                String.valueOf(adapter.mMovies.get(position).getId()))
-                        .putExtra(getString(R.string.movie_desctiption), adapter.mMovies.get(position));
-                startActivity(intent);
+                Cursor cur = (Cursor) parent.getItemAtPosition(position);
+                if (cur != null) {
+                    ((Callback)getActivity()).onItemSelected(
+                            MovieContract.buildMovieUri(
+                                    cur.getInt(cur.getColumnIndex(MovieContract._ID)
+                                    )
+                            )
+                    );
+                }
             }
         });
+
+        setHasOptionsMenu(true);
         return v;
     }
 
-
-    public class ImageAdapter extends BaseAdapter {
-        private final String LOG_TAG = getActivity().getClass().getSimpleName();
-        private Context mContext;
-        ArrayList<MovieDescription> mMovies = null;
-        private ArrayList<ImageView> images;
-
-        public ImageAdapter(Context c) {
-            mContext = c;
-            final String URL_PICTURE = "http://image.tmdb.org/t/p/w500/";
-
-            try {
-                mMovies = new FetchMovieTask().execute("popular?").get();
-            } catch (ExecutionException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-
-            if (mMovies != null) {
-                images = new ArrayList<>();
-                ImageView vi;
-                for (int i = 0; i < mMovies.size(); i++) {
-                    vi = new ImageView(getActivity());
-                    Picasso.with(mContext).load(URL_PICTURE + mMovies.get(i).getImageUrl()).into(vi);
-                    images.add(vi);
-                }
-            } else Log.e(LOG_TAG, "Null pointer exception when loading pictures from TMDB");
-        }
-
-        public int getCount() {
-            return mMovies.size();
-        }
-
-        public Object getItem(int position) {
-            return null;
-        }
-
-        public long getItemId(int position) {
-            return 0;
-        }
-
-        // create a new ImageView for each item referenced by the Adapter
-        public View getView(int position, View convertView, ViewGroup parent) {
-
-            ImageView imageView;
-            if (convertView == null) {
-                // if it's not recycled, initialize some attributes
-                imageView = new ImageView(mContext);
-                imageView.setLayoutParams(new GridView.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT)
-                );
-                imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            } else {
-                imageView = (ImageView) convertView;
-            }
-            imageView = images.get(position);
-            return imageView;
-        }
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+        getLoaderManager().initLoader(MY_CURSOR_LOADER_ID, null, this);
     }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.menu_refresh) {
+            updatePosters();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    public void updatePosters() {
+        MovieCatcherSyncAdapter.syncImmediately(getActivity());
+        gridView.invalidateViews();
+    }
+
+    @Override
+    public Loader onCreateLoader(int id, Bundle args) {
+        String sortOrder = getFriendlySortingFromPreferences(getActivity());
+        return new CursorLoader(getActivity(),
+                MovieContract.buildMovieSorting(sortOrder),
+                null, null, null,
+                sortOrder);
+    }
+
+    @Override
+    public void onLoadFinished(Loader loader, Object data) {
+        mMovieAdapter.swapCursor((Cursor) data);
+    }
+
+    @Override
+    public void onLoaderReset(Loader loader) {
+        mMovieAdapter.swapCursor(null);
+    }
+
 
 }

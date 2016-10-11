@@ -3,7 +3,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="5dp" >
+    android:padding="5dp"
+    android:background="#8470FF">
 
     <TextView
         android:layout_width="wrap_content"
@@ -41,7 +42,6 @@
         android:id="@+id/tvTextReleaseDate"
         android:textSize="20sp"
         android:textStyle="italic"
-        android:layout_above="@+id/tvCountRate"
         android:layout_toRightOf="@+id/tvReleaseDate"
         android:layout_toEndOf="@+id/tvReleaseDate" />
 
@@ -52,35 +52,24 @@
         android:id="@+id/tvRate"
         android:textSize="25sp"
         android:textStyle="bold"
-        android:layout_below="@+id/tvTextReleaseDate"
+        android:layout_below="@+id/tvReleaseDate"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
         android:layout_marginBottom="30dp"
         android:layout_marginTop="10dp"/>
 
-    <TextView
-        android:layout_width="match_parent"
+    <RatingBar
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/tvCountRate"
-        android:textSize="20sp"
-        android:textStyle="italic"
-        android:layout_below="@+id/tvReleaseDate" />
-
-    <ProgressBar
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/progressBar"
+        android:id="@+id/ratingBar"
         android:layout_below="@+id/tvRate"
-        style="@android:style/Widget.ProgressBar.Horizontal"
-        android:clickable="false" />
-
+        android:layout_centerHorizontal="true" />
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/tvNumberRate"
-        android:textAlignment="center"
         android:textSize="30sp"
-        android:layout_below="@+id/progressBar"
-        android:layout_centerHorizontal="true" />
+        android:layout_below="@+id/ratingBar"
+        android:layout_centerHorizontal="true"/>
 
 </RelativeLayout>
