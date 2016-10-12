@@ -6,12 +6,10 @@ import android.content.ContentUris;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Environment;
-import android.provider.BaseColumns;
-import android.util.Log;
 
 import java.io.File;
 
-public class MovieContract implements BaseColumns {
+public class MovieContract {
     /*
         Some constants, which will use in ContentProvider
      */
@@ -30,8 +28,17 @@ public class MovieContract implements BaseColumns {
     public static final String CONTENT_TYPE_ITEM =
             ContentResolver.CURSOR_ITEM_BASE_TYPE + "/" + CONTENT_AUTHORITY + "/" + PATH;
 
-    public static Uri buildMovieSorting(String sortOrder) {
-        return CONTENT_URI.buildUpon().appendPath(sortOrder).build();
+    public static final String SORT_ORDER_KEY = "sortOrder";
+    public static final String LIMIT_KEY = "limit";
+    public static Uri buildMovieSorting(String sortOrder, String limit) {
+        return CONTENT_URI.buildUpon()
+                .appendPath(sortOrder)
+                .appendPath(limit)
+                .build();
+    }
+
+    public static String getProperSorting(String sortOrder){
+        return sortOrder + " DESC";
     }
 
     //For UriMatcher
@@ -54,14 +61,11 @@ public class MovieContract implements BaseColumns {
                     Environment.getExternalStorageDirectory().getAbsolutePath()
                             + FILE_DIR
             );
-            Log.d("Movie Contract","External storage : " +  sdPath.getAbsolutePath());
         } else {
             sdPath = new File(
                     context.getFilesDir().getAbsolutePath()
                             + FILE_DIR
             );
-            Log.d("Movie Contract","Internal storage : " +  sdPath.getAbsolutePath());
-
         }
         sdPath.mkdirs();
         return new File(sdPath, filename);
@@ -70,7 +74,9 @@ public class MovieContract implements BaseColumns {
     /*
         Database columns
      */
+
     public static final String TABLE_NAME = "movies";
+    public static final String COLUMN_ID = "_id";
     public static final String COLUMN_TITLE = "title";
     public static final String COLUMN_OVERVIEW = "overview";
     public static final String COLUMN_RELEASE_DATE = "release_date";

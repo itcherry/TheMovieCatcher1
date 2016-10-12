@@ -13,6 +13,8 @@ import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
 
+import java.util.List;
+
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_POPULARITY;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_VOTE_AVERAGE;
 import static com.itcherry.themoviecatcher.data.MovieContract.CONTENT_AUTHORITY;
@@ -25,6 +27,7 @@ import static com.itcherry.themoviecatcher.data.MovieContract.URI_MOVIE;
 import static com.itcherry.themoviecatcher.data.MovieContract.URI_MOVIE_ID;
 import static com.itcherry.themoviecatcher.data.MovieContract.URI_MOVIE_WITH_SORTING;
 import static com.itcherry.themoviecatcher.data.MovieContract.buildMovieUri;
+import static com.itcherry.themoviecatcher.data.MovieContract.getProperSorting;
 
 /**
  * Creating own ContentProvider. It is wrapper for SQLite database.
@@ -39,17 +42,12 @@ public class MovieProvider extends ContentProvider {
     private MovieDbHelper mOpenHelper;
     private SQLiteDatabase db;
 
-    //SORT BY popularity DESC
-    private static final String sMovieSortByPopularity = COLUMN_POPULARITY + " DESC";
-    //SORT BY rate DESC
-    private static final String sMovieSortByRate = COLUMN_VOTE_AVERAGE + " DESC";
-
     private static UriMatcher buildUriMatcher() {
         UriMatcher retUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
         retUriMatcher.addURI(CONTENT_AUTHORITY, PATH, URI_MOVIE);
         retUriMatcher.addURI(CONTENT_AUTHORITY, PATH + "/#", URI_MOVIE_ID);
-        retUriMatcher.addURI(CONTENT_AUTHORITY, PATH + "/*", URI_MOVIE_WITH_SORTING);
+        retUriMatcher.addURI(CONTENT_AUTHORITY, PATH + "/*/*", URI_MOVIE_WITH_SORTING);
 
         return retUriMatcher;
     }
@@ -78,6 +76,7 @@ public class MovieProvider extends ContentProvider {
         return true;
     }
 
+
     @Nullable
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
@@ -85,38 +84,48 @@ public class MovieProvider extends ContentProvider {
 
         Cursor retCursor;
         final int matcher = uriMatcher.match(uri);
+        String limit = null;
 
         switch (matcher) {
             case URI_MOVIE:
                 if (TextUtils.isEmpty(sortOrder)) {
                     SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getContext());
-                    if (preferences.getString("sorting", "top_rated?").equals("top_rated?"))
-                        sortOrder = sMovieSortByRate;
-                    else sortOrder = sMovieSortByPopularity;
+
+                    String sortOrderPreferences = preferences.getString("sorting", "top_rated?");
+                    if(sortOrderPreferences.equals("top_rated?")){
+                        sortOrder = COLUMN_VOTE_AVERAGE;
+                    }else{
+                        sortOrder = COLUMN_POPULARITY;
+                    }
                 }
                 break;
             case URI_MOVIE_WITH_SORTING:
-                //Stub
+                List<String> pathSegments = uri.getPathSegments();
+                sortOrder = pathSegments.get(1);
+                limit = pathSegments.get(2);
                 break;
             case URI_MOVIE_ID:
                 String id = uri.getLastPathSegment();
                 if (TextUtils.isEmpty(selection)) {
-                    selection = MovieContract._ID + " = " + id;
+                    selection = MovieContract.COLUMN_ID + " = " + id;
                 } else {
-                    selection = selection + " AND " + MovieContract._ID + " = " + id;
+                    selection = selection + " AND " + MovieContract.COLUMN_ID + " = " + id;
                 }
                 break;
             default:
                 throw new IllegalArgumentException("Unknown URI : " + uri);
         }
-
+        if(sortOrder!= null)
+            sortOrder = getProperSorting(sortOrder);
+        Log.d(LOG_TAG,"SortOrder : " + sortOrder);
         retCursor = mOpenHelper.getWritableDatabase()
                 .query(TABLE_NAME,
                         projection,
                         selection,
                         selectionArgs,
                         null, null,
-                        sortOrder);
+                        sortOrder,
+                        limit);
         try {
             retCursor.setNotificationUri(getContext().getContentResolver(), CONTENT_URI);
         } catch (NullPointerException e) {
@@ -128,12 +137,8 @@ public class MovieProvider extends ContentProvider {
     @Nullable
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        Log.d(LOG_TAG, "insert, " + uri.toString());
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
-        Uri retUri;
-
-        Log.d(LOG_TAG,"insert, uri.match : " + uriMatcher.match(uri));
-        Log.d(LOG_TAG,"insert, uri : " + uri);
+        Uri retUri = null;
 
         if (uriMatcher.match(uri) == URI_MOVIE) {
             long _id = db.insert(TABLE_NAME, null, values);
@@ -151,8 +156,8 @@ public class MovieProvider extends ContentProvider {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int retCount = 0;
 
-        if(selection == null) selection = "1";
-        switch(uriMatcher.match(uri)){
+        if (selection == null) selection = "1";
+        switch (uriMatcher.match(uri)) {
             case URI_MOVIE:
                 // do not change selection parameter
                 break;
@@ -160,18 +165,18 @@ public class MovieProvider extends ContentProvider {
                 String id = uri.getLastPathSegment();
                 Log.d(LOG_TAG, "URI_CONTACTS_ID, " + id);
                 if (TextUtils.isEmpty(selection)) {
-                    selection = MovieContract._ID + " = " + id;
+                    selection = MovieContract.COLUMN_ID + " = " + id;
                 } else {
-                    selection = selection + " AND " + MovieContract._ID + " = " + id;
+                    selection = selection + " AND " + MovieContract.COLUMN_ID + " = " + id;
                 }
                 break;
             default:
                 throw new IllegalArgumentException("Unknown URI : " + uri);
         }
 
-        retCount = db.delete(TABLE_NAME,selection,selectionArgs);
-        if(retCount != 0){
-            getContext().getContentResolver().notifyChange(uri,null);
+        retCount = db.delete(TABLE_NAME, selection, selectionArgs);
+        if (retCount != 0) {
+            getContext().getContentResolver().notifyChange(uri, null);
         }
         return retCount;
     }
@@ -182,8 +187,8 @@ public class MovieProvider extends ContentProvider {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int retCount = 0;
 
-        if(selection == null) selection = "1";
-        switch(uriMatcher.match(uri)){
+        if (selection == null) selection = "1";
+        switch (uriMatcher.match(uri)) {
             case URI_MOVIE:
                 // do not change selection parameter
                 break;
@@ -191,18 +196,18 @@ public class MovieProvider extends ContentProvider {
                 String id = uri.getLastPathSegment();
                 Log.d(LOG_TAG, "URI_CONTACTS_ID, " + id);
                 if (TextUtils.isEmpty(selection)) {
-                    selection = MovieContract._ID + " = " + id;
+                    selection = MovieContract.COLUMN_ID + " = " + id;
                 } else {
-                    selection = selection + " AND " + MovieContract._ID + " = " + id;
+                    selection = selection + " AND " + MovieContract.COLUMN_ID + " = " + id;
                 }
                 break;
             default:
                 throw new IllegalArgumentException("Unknown URI : " + uri);
         }
 
-        retCount = db.update(TABLE_NAME,values,selection,selectionArgs);
-        if(retCount != 0){
-            getContext().getContentResolver().notifyChange(uri,null);
+        retCount = db.update(TABLE_NAME, values, selection, selectionArgs);
+        if (retCount != 0) {
+            getContext().getContentResolver().notifyChange(uri, null);
         }
         return retCount;
     }

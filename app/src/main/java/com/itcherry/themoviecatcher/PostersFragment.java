@@ -43,7 +43,7 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
         gridView = (GridView) v.findViewById(R.id.grid_layout);
 
         String sortOrder = Utility.getFriendlySortingFromPreferences(getActivity());
-        Uri movieURI = MovieContract.buildMovieSorting(sortOrder);
+        Uri movieURI = MovieContract.buildMovieSorting(sortOrder,"20");
         Cursor cursor = (getActivity()).getContentResolver().query(
                 movieURI,
                 null,
@@ -62,7 +62,7 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
                 if (cur != null) {
                     ((Callback)getActivity()).onItemSelected(
                             MovieContract.buildMovieUri(
-                                    cur.getInt(cur.getColumnIndex(MovieContract._ID)
+                                    cur.getInt(cur.getColumnIndex(MovieContract.COLUMN_ID)
                                     )
                             )
                     );
@@ -72,6 +72,13 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
 
         setHasOptionsMenu(true);
         return v;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        getLoaderManager().restartLoader(MY_CURSOR_LOADER_ID,null,this);
+
     }
 
     @Override
@@ -92,15 +99,16 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
     public void updatePosters() {
         MovieCatcherSyncAdapter.syncImmediately(getActivity());
         gridView.invalidateViews();
+        getLoaderManager().restartLoader(MY_CURSOR_LOADER_ID,null,this);
     }
 
     @Override
     public Loader onCreateLoader(int id, Bundle args) {
         String sortOrder = getFriendlySortingFromPreferences(getActivity());
         return new CursorLoader(getActivity(),
-                MovieContract.buildMovieSorting(sortOrder),
+                MovieContract.buildMovieSorting(sortOrder,"20"),
                 null, null, null,
-                sortOrder);
+                null);
     }
 
     @Override

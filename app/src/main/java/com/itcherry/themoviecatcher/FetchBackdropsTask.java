@@ -53,7 +53,7 @@ public class FetchBackdropsTask extends AsyncTask<String, Void, String[]> {
 
         try {
             Uri uri = Uri.parse(MOVIE_BACKDROPS_URL).buildUpon()
-                    .appendQueryParameter(API_KEY, "MyApiKey")
+                    .appendQueryParameter(API_KEY, "277455b8532b51d0dd24b2446e50a0ad")
                     .build();
 
             URL url = new URL(uri.toString());

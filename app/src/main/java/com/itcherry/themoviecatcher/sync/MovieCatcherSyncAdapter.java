@@ -15,7 +15,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 
-import com.itcherry.themoviecatcher.MovieDescription;
 import com.itcherry.themoviecatcher.R;
 import com.itcherry.themoviecatcher.Utility;
 import com.itcherry.themoviecatcher.data.MovieContract;
@@ -32,9 +31,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Vector;
 
+import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_ID;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_IMAGE_URL;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_OVERVIEW;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_POPULARITY;
@@ -51,8 +50,8 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
     }
     // Interval at which to sync with the weather, in milliseconds.
     // 60 seconds (1 minute)  180 = 3 hours
-    public static final int SYNC_INTERVAL = 60 * 180;
-    public static final int SYNC_FLEXTIME = SYNC_INTERVAL/3;
+    public static final long SYNC_INTERVAL = 60L * 180L;
+    public static final long SYNC_FLEXTIME = SYNC_INTERVAL/3;
 
     /*private static final long DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
     private static final int WEATHER_NOTIFICATION_ID = 3004;
@@ -82,6 +81,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
     private void getMoviesFromJsonString(String postersJsonStr){
 
         final String RESULTS_ARRAY = "results";
+        final String POSTER_ID = "id";
         final String POSTER_IMAGE_URL = "poster_path";
         final String POSTER_OVERVIEW = "overview";
         final String POSTER_RELEASE_DATE = "release_date";
@@ -116,6 +116,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
                 ContentValues cv = new ContentValues();
 
                 //cv.put(POSTER_ID,object.getInt(POSTER_ID));
+                cv.put(COLUMN_ID,object.getInt(POSTER_ID));
                 cv.put(COLUMN_VOTE_COUNT,object.getInt(POSTER_VOTE_COUNT));
                 cv.put(COLUMN_TITLE, object.getString(POSTER_TITLE));
                 cv.put(COLUMN_VOTE_AVERAGE,object.getDouble(POSTER_VOTE_AVERAGE));
@@ -144,7 +145,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
                 ContentValues [] arrayCV = new ContentValues[cVVector.size()];
                 cVVector.toArray(arrayCV);
                 Log.d(LOG_TAG,"CONTENT_URI : " + MovieContract.CONTENT_URI);
-                inserted = getContext().getContentResolver().bulkInsert(MovieContract.CONTENT_URI,arrayCV);
+                inserted = getContext().getContentResolver().bulkInsert(MovieContract.CONTENT_URI, arrayCV);
                 // Here we should delete old rows!!
                 //Also notify movie
             }
@@ -226,7 +227,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
         String postersJsonStr = null;
         HttpURLConnection urlConnection = null;
         BufferedReader reader = null;
-        ArrayList<MovieDescription> movies;
+        //ArrayList<MovieDescription> movies;
 
         final String MOVIE_BASE_URL = "http://api.themoviedb.org/3/movie/" + sortOrder;
         final String MOVIE_BACKDROPS_URL = "http://api.themoviedb.org/3/movie/" + "/images?";
@@ -237,7 +238,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
         try {
             Uri uri = Uri.parse(MOVIE_BASE_URL).buildUpon()
                     .appendQueryParameter(SORTING, "vote_average.desc")
-                    .appendQueryParameter(API_KEY, "MyApiKey")
+                    .appendQueryParameter(API_KEY, "277455b8532b51d0dd24b2446e50a0ad")
                     .build();
 
             URL url = new URL(uri.toString());
@@ -302,7 +303,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
     /**
      * Helper method to schedule the sync adapter periodic execution
      */
-    public static void configurePeriodicSync(Context context, int syncInterval, int flexTime) {
+    public static void configurePeriodicSync(Context context, long syncInterval, long flexTime) {
         Account account = getSyncAccount(context);
         String authority = context.getString(R.string.content_authority);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {

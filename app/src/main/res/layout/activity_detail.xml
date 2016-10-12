@@ -19,12 +19,14 @@
             android:padding="3dp">
 
         </android.support.v4.view.ViewPager>
-        <fragment
+
+        <FrameLayout
+            xmlns:tools="http://schemas.android.com/tools"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:name="com.itcherry.themoviecatcher.DetailFragment"
-            android:id="@+id/detail_fragment"
-            tools:layout="@layout/fragment_detail"/>
+            android:id="@+id/movie_detail_container"
+            tools:context="com.itcherry.themoviecatcher.DetailActivity"
+            tools:ignore="MergeRootFrame"/>
     </LinearLayout>
 
 </ScrollView>

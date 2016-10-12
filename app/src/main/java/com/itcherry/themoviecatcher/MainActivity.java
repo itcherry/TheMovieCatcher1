@@ -46,7 +46,7 @@ public class MainActivity extends ActionBarActivity implements PostersFragment.C
     @Override
     protected void onResume() {
         super.onResume();
-        MovieCatcherSyncAdapter.syncImmediately(this);
+        //MovieCatcherSyncAdapter.syncImmediately(this);
     }
 
     @Override

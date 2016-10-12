@@ -11,6 +11,7 @@ import com.itcherry.themoviecatcher.data.MovieContract;
 public class Utility {
     final static String LOG_TAG = Utility.class.getSimpleName();
 
+
     public static String getSortingFromPreferences(Context context){ // temporary
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         Log.d(LOG_TAG,prefs.getString(context.getString(R.string.pref_sorting_key),

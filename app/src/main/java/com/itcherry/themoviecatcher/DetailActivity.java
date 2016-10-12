@@ -1,6 +1,5 @@
 package com.itcherry.themoviecatcher;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -25,19 +24,29 @@ public class DetailActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
 
-        Intent intent = getIntent();
-        String id = intent.getStringExtra(getString(R.string.movie_id));
+        String id = getIntent().getData().getLastPathSegment();
+
         try {
             backdrops = new FetchBackdropsTask().execute(id).get();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
+        } catch (ExecutionException | InterruptedException e) {
             e.printStackTrace();
         }
 
         pager = (ViewPager) findViewById(R.id.pager);
         pagerAdapter = new MyFragmentPagerAdapter(getSupportFragmentManager());
         pager.setAdapter(pagerAdapter);
+
+        if(savedInstanceState == null){
+            Bundle arguments = new Bundle();
+            arguments.putParcelable(DetailFragment.DETAIL_URI,getIntent().getData());
+
+            DetailFragment df = new DetailFragment();
+            df.setArguments(arguments);
+
+            getSupportFragmentManager().beginTransaction()
+                    .add(R.id.movie_detail_container, df)
+                    .commit();
+        }
 
     }
 
