@@ -9,12 +9,13 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
-import android.util.Log;
 
 import java.util.List;
 
+import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_ID;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_POPULARITY;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_VOTE_AVERAGE;
 import static com.itcherry.themoviecatcher.data.MovieContract.CONTENT_AUTHORITY;
@@ -22,9 +23,11 @@ import static com.itcherry.themoviecatcher.data.MovieContract.CONTENT_TYPE;
 import static com.itcherry.themoviecatcher.data.MovieContract.CONTENT_TYPE_ITEM;
 import static com.itcherry.themoviecatcher.data.MovieContract.CONTENT_URI;
 import static com.itcherry.themoviecatcher.data.MovieContract.PATH;
+import static com.itcherry.themoviecatcher.data.MovieContract.PATH_PAGE_DELETING;
 import static com.itcherry.themoviecatcher.data.MovieContract.TABLE_NAME;
 import static com.itcherry.themoviecatcher.data.MovieContract.URI_MOVIE;
 import static com.itcherry.themoviecatcher.data.MovieContract.URI_MOVIE_ID;
+import static com.itcherry.themoviecatcher.data.MovieContract.URI_MOVIE_WITH_PAGE;
 import static com.itcherry.themoviecatcher.data.MovieContract.URI_MOVIE_WITH_SORTING;
 import static com.itcherry.themoviecatcher.data.MovieContract.buildMovieUri;
 import static com.itcherry.themoviecatcher.data.MovieContract.getProperSorting;
@@ -47,7 +50,9 @@ public class MovieProvider extends ContentProvider {
 
         retUriMatcher.addURI(CONTENT_AUTHORITY, PATH, URI_MOVIE);
         retUriMatcher.addURI(CONTENT_AUTHORITY, PATH + "/#", URI_MOVIE_ID);
-        retUriMatcher.addURI(CONTENT_AUTHORITY, PATH + "/*/*", URI_MOVIE_WITH_SORTING);
+        //first * for sorting, second * for limit
+        retUriMatcher.addURI(CONTENT_AUTHORITY, PATH + "/"+ PATH_PAGE_DELETING + "/#", URI_MOVIE_WITH_PAGE);
+        retUriMatcher.addURI(CONTENT_AUTHORITY, PATH + "/*/#", URI_MOVIE_WITH_SORTING);
 
         return retUriMatcher;
     }
@@ -62,6 +67,8 @@ public class MovieProvider extends ContentProvider {
             case URI_MOVIE:
                 return CONTENT_TYPE;
             case URI_MOVIE_WITH_SORTING:
+                return CONTENT_TYPE;
+            case URI_MOVIE_WITH_PAGE:
                 return CONTENT_TYPE;
             case URI_MOVIE_ID:
                 return CONTENT_TYPE_ITEM;
@@ -80,12 +87,10 @@ public class MovieProvider extends ContentProvider {
     @Nullable
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
-        Log.d(LOG_TAG, "query, " + uri.toString());
 
         Cursor retCursor;
         final int matcher = uriMatcher.match(uri);
         String limit = null;
-
         switch (matcher) {
             case URI_MOVIE:
                 if (TextUtils.isEmpty(sortOrder)) {
@@ -99,11 +104,20 @@ public class MovieProvider extends ContentProvider {
                     }
                 }
                 break;
+            case URI_MOVIE_WITH_PAGE:
+                String page = uri.getLastPathSegment();
+                if (TextUtils.isEmpty(selection)) {
+                    selection = MovieContract.COLUMN_PAGE + " >= " + page;
+                } else {
+                    selection = selection + " AND " + MovieContract.COLUMN_PAGE + " >= " + page;
+                }
+                break;
             case URI_MOVIE_WITH_SORTING:
                 List<String> pathSegments = uri.getPathSegments();
                 sortOrder = pathSegments.get(1);
                 limit = pathSegments.get(2);
                 break;
+
             case URI_MOVIE_ID:
                 String id = uri.getLastPathSegment();
                 if (TextUtils.isEmpty(selection)) {
@@ -117,7 +131,6 @@ public class MovieProvider extends ContentProvider {
         }
         if(sortOrder!= null)
             sortOrder = getProperSorting(sortOrder);
-        Log.d(LOG_TAG,"SortOrder : " + sortOrder);
         retCursor = mOpenHelper.getWritableDatabase()
                 .query(TABLE_NAME,
                         projection,
@@ -141,7 +154,17 @@ public class MovieProvider extends ContentProvider {
         Uri retUri = null;
 
         if (uriMatcher.match(uri) == URI_MOVIE) {
-            long _id = db.insert(TABLE_NAME, null, values);
+            Cursor cursor = db.query(TABLE_NAME,
+                    new String[]{COLUMN_ID},
+                    COLUMN_ID,
+                    new String[]{values.getAsString(COLUMN_ID)},
+                    null,null,null);
+            long _id;
+            if(cursor.moveToFirst()) {
+                _id = db.replace(TABLE_NAME, null, values);
+            }else {
+                _id = db.insert(TABLE_NAME,null,values);
+            }
             if (_id > 0) {
                 retUri = buildMovieUri(_id);
             } else throw new SQLException("Failed to insert row into " + uri);
@@ -152,7 +175,6 @@ public class MovieProvider extends ContentProvider {
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-        Log.d(LOG_TAG, "delete, " + uri.toString());
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int retCount = 0;
 
@@ -163,11 +185,18 @@ public class MovieProvider extends ContentProvider {
                 break;
             case URI_MOVIE_ID:
                 String id = uri.getLastPathSegment();
-                Log.d(LOG_TAG, "URI_CONTACTS_ID, " + id);
                 if (TextUtils.isEmpty(selection)) {
                     selection = MovieContract.COLUMN_ID + " = " + id;
                 } else {
                     selection = selection + " AND " + MovieContract.COLUMN_ID + " = " + id;
+                }
+                break;
+            case URI_MOVIE_WITH_PAGE:
+                String page = uri.getLastPathSegment();
+                if (TextUtils.isEmpty(selection)) {
+                    selection = MovieContract.COLUMN_PAGE + " >= " + page;
+                } else {
+                    selection = selection + " AND " + MovieContract.COLUMN_PAGE + " >= " + page;
                 }
                 break;
             default:
@@ -182,8 +211,7 @@ public class MovieProvider extends ContentProvider {
     }
 
     @Override
-    public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
-        Log.d(LOG_TAG, "delete, " + uri.toString());
+    public int update(@NonNull Uri uri, ContentValues values, String selection, String[] selectionArgs) {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int retCount = 0;
 
@@ -194,7 +222,6 @@ public class MovieProvider extends ContentProvider {
                 break;
             case URI_MOVIE_ID:
                 String id = uri.getLastPathSegment();
-                Log.d(LOG_TAG, "URI_CONTACTS_ID, " + id);
                 if (TextUtils.isEmpty(selection)) {
                     selection = MovieContract.COLUMN_ID + " = " + id;
                 } else {
@@ -223,7 +250,20 @@ public class MovieProvider extends ContentProvider {
                 int returnCount = 0;
                 try {
                     for (ContentValues value : values) {
-                        long _id = db.insert(TABLE_NAME, null, value);
+
+                        Cursor cursor = db.query(TABLE_NAME,
+                                new String[]{COLUMN_ID},
+                                COLUMN_ID + " = ?",
+                                new String[]{value.getAsString(COLUMN_ID)},
+                                null,null,null);
+                        long _id;
+                        if(cursor.moveToFirst()) {
+                            _id = db.replace(TABLE_NAME, null, value);
+                        }else {
+                            _id = db.insert(TABLE_NAME,null,value);
+                        }
+
+                        //long _id = db.insert(TABLE_NAME, null, value);
                         if (_id != -1) {
                             returnCount++;
                         }

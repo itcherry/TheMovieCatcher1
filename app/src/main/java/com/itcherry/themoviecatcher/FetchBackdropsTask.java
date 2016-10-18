@@ -99,7 +99,9 @@ public class FetchBackdropsTask extends AsyncTask<String, Void, String[]> {
                 }
             }
         }
-        return getBackdropsFromJsonString(backdropsJsonStr);
+        String [] result = getBackdropsFromJsonString(backdropsJsonStr);
+
+        return result;
     }
 }
 

@@ -2,19 +2,30 @@ package com.itcherry.themoviecatcher.sync;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.AbstractThreadedSyncAdapter;
 import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.SyncRequest;
 import android.content.SyncResult;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.util.Log;
 
+import com.itcherry.themoviecatcher.FetchBackdropsTask;
+import com.itcherry.themoviecatcher.MainActivity;
 import com.itcherry.themoviecatcher.R;
 import com.itcherry.themoviecatcher.Utility;
 import com.itcherry.themoviecatcher.data.MovieContract;
@@ -25,6 +36,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,15 +44,18 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Vector;
+import java.util.concurrent.ExecutionException;
 
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_ID;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_IMAGE_URL;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_OVERVIEW;
+import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_PAGE;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_POPULARITY;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_RELEASE_DATE;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_TITLE;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_VOTE_AVERAGE;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_VOTE_COUNT;
+import static com.itcherry.themoviecatcher.data.MovieContract.getDirForImages;
 
 public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
     public final String LOG_TAG = MovieCatcherSyncAdapter.class.getSimpleName();
@@ -48,28 +63,22 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
     public MovieCatcherSyncAdapter(Context context, boolean autoInitialize) {
         super(context, autoInitialize);
     }
+
     // Interval at which to sync with the weather, in milliseconds.
     // 60 seconds (1 minute)  180 = 3 hours
     public static final long SYNC_INTERVAL = 60L * 180L;
-    public static final long SYNC_FLEXTIME = SYNC_INTERVAL/3;
+    public static final long SYNC_FLEXTIME = SYNC_INTERVAL / 3;
+    public static final String SYNC_FINISHED = "sync_finished";
+    private static final long DAY_IN_MILLIS = 1000 * 60 * 3;//1000 * 60 * 60 * 24;
+    private static final int MOVIE_NOTIFICATION_ID = 3004;
 
-    /*private static final long DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
-    private static final int WEATHER_NOTIFICATION_ID = 3004;
-
-    private static final String[] NOTIFY_WEATHER_PROJECTION = new String[] {
-            WeatherContract.WeatherEntry.COLUMN_WEATHER_ID,
-            WeatherContract.WeatherEntry.COLUMN_MAX_TEMP,
-            WeatherContract.WeatherEntry.COLUMN_MIN_TEMP,
-            WeatherContract.WeatherEntry.COLUMN_SHORT_DESC
+    private static final String[] NOTIFY_MOVIE_PROJECTION = new String[]{
+            MovieContract.COLUMN_ID,
+            MovieContract.COLUMN_TITLE,
     };
     // these indices must match the projection
-    private static final int INDEX_WEATHER_ID = 0;
-    private static final int INDEX_MAX_TEMP = 1;
-    private static final int INDEX_MIN_TEMP = 2;
-    private static final int INDEX_SHORT_DESC = 3;
-
-
-    */
+    private static final int INDEX_ID = 0;
+    private static final int INDEX_TITLE = 1;
 
     /**
      * Take the String representing the complete forecast in JSON Format and
@@ -78,7 +87,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
      * Fortunately parsing is easy:  constructor takes the JSON string and converts it
      * into an Object hierarchy for us.
      */
-    private void getMoviesFromJsonString(String postersJsonStr){
+    private void getMoviesFromJsonString(String postersJsonStr, String page) {
 
         final String RESULTS_ARRAY = "results";
         final String POSTER_ID = "id";
@@ -102,28 +111,18 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
 
             for (int i = 0; i < results.length(); i++) {
                 object = results.getJSONObject(i);
-                /*movie = new MovieDescription(
-                        object.getInt(POSTER_ID),
-                        object.getInt(POSTER_VOTE_COUNT),
-                        object.getString(POSTER_TITLE),
-                        object.getDouble(POSTER_VOTE_AVERAGE),
-                        object.getDouble(POSTER_POPULARITY),
-                        object.getString(POSTER_RELEASE_DATE),
-                        object.getString(POSTER_IMAGE_URL),
-                        object.getString(POSTER_OVERVIEW)
-                );*/
 
                 ContentValues cv = new ContentValues();
 
-                //cv.put(POSTER_ID,object.getInt(POSTER_ID));
-                cv.put(COLUMN_ID,object.getInt(POSTER_ID));
-                cv.put(COLUMN_VOTE_COUNT,object.getInt(POSTER_VOTE_COUNT));
+                cv.put(COLUMN_ID, object.getInt(POSTER_ID));
+                cv.put(COLUMN_VOTE_COUNT, object.getInt(POSTER_VOTE_COUNT));
                 cv.put(COLUMN_TITLE, object.getString(POSTER_TITLE));
-                cv.put(COLUMN_VOTE_AVERAGE,object.getDouble(POSTER_VOTE_AVERAGE));
-                cv.put(COLUMN_POPULARITY,object.getDouble(POSTER_POPULARITY));
+                cv.put(COLUMN_VOTE_AVERAGE, object.getDouble(POSTER_VOTE_AVERAGE));
+                cv.put(COLUMN_POPULARITY, object.getDouble(POSTER_POPULARITY));
                 cv.put(COLUMN_RELEASE_DATE, object.getString(POSTER_RELEASE_DATE));
-                cv.put(COLUMN_IMAGE_URL,object.getString(POSTER_IMAGE_URL));
+                cv.put(COLUMN_IMAGE_URL, object.getString(POSTER_IMAGE_URL));
                 cv.put(COLUMN_OVERVIEW, object.getString(POSTER_OVERVIEW));
+                cv.put(COLUMN_PAGE, page);
 
                 cVVector.add(cv);
 
@@ -131,72 +130,103 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
                         .load(MovieContract.URL_PICTURE + object.getString(POSTER_IMAGE_URL))
                         .get();
                 FileOutputStream streamWriter = new FileOutputStream(
-                        MovieContract.getDirForImages(object.getString(POSTER_IMAGE_URL),getContext())
+                        getDirForImages(object.getString(POSTER_IMAGE_URL), getContext())
                 );
 
-                bitmap.compress(Bitmap.CompressFormat.JPEG,90,streamWriter);
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, streamWriter);
                 streamWriter.flush();
                 streamWriter.close();
-                //result.add(movie);
             }
 
             int inserted = 0;
-            if(cVVector.size() > 0){
-                ContentValues [] arrayCV = new ContentValues[cVVector.size()];
+            if (cVVector.size() > 0) {
+                ContentValues[] arrayCV = new ContentValues[cVVector.size()];
                 cVVector.toArray(arrayCV);
-                Log.d(LOG_TAG,"CONTENT_URI : " + MovieContract.CONTENT_URI);
                 inserted = getContext().getContentResolver().bulkInsert(MovieContract.CONTENT_URI, arrayCV);
-                // Here we should delete old rows!!
-                //Also notify movie
+                notifyMovies();
             }
-            Log.d(LOG_TAG, "FetchWeatherTask Complete. " + inserted + " Inserted");
         } catch (JSONException e) {
-            Log.e(LOG_TAG,e.getMessage());
+            Log.e(LOG_TAG, e.getMessage());
         } catch (IOException e) {
             e.printStackTrace();
         }
         //return result;
     }
+    public static void deleteOldRows(Context context, String page){
+        Uri uri = MovieContract.buildMoviePage(Integer.parseInt(page));
+        Cursor cursor = context.getContentResolver().query(
+                uri,
+                new String[]{COLUMN_IMAGE_URL},null,null,null);
+        if(cursor != null) {
+            while (cursor.moveToNext()) {
+                File file = MovieContract.getDirForImages(
+                        cursor.getString(cursor.getColumnIndex(COLUMN_IMAGE_URL)),
+                        context);
+                if (file.exists()) { //Если файл или директория существует
+                    String deleteCmd = "rm -r " + file.getAbsolutePath(); //Создаем текстовую командную строку
+                    Runtime runtime = Runtime.getRuntime();
+                    try {
+                        runtime.exec(deleteCmd); //Выполняем системные команды
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        int deleted = context.getContentResolver().delete(
+                MovieContract.buildMoviePage(Integer.parseInt(page)),null,null);
 
-    /*private void notifyMovies() {
+    }
+    private void notifyMovies() {
         Context context = getContext();
         //checking the last update and notify if it' the first of the day
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         String lastNotificationKey = context.getString(R.string.pref_last_notification);
+        String lastBackdropKey = context.getString(R.string.pref_last_backdrop);
+        int lastBackdrop = prefs.getInt(lastBackdropKey, 0);
         long lastSync = prefs.getLong(lastNotificationKey, 0);
 
         if (System.currentTimeMillis() - lastSync >= DAY_IN_MILLIS) {
             // Last sync was more than 1 day ago, let's send a notification with the weather.
-            String locationQuery = Utility.getPreferredLocation(context);
 
-            Uri weatherUri = WeatherContract.WeatherEntry.buildWeatherLocationWithDate(locationQuery, System.currentTimeMillis());
+            Uri movieUri = MovieContract.buildMovieSorting("popularity", "1");
 
             // we'll query our contentProvider, as always
-            Cursor cursor = context.getContentResolver().query(weatherUri, NOTIFY_WEATHER_PROJECTION, null, null, null);
+            Cursor cursor = context.getContentResolver().query(movieUri, NOTIFY_MOVIE_PROJECTION, null, null, null);
 
             if (cursor.moveToFirst()) {
-                int weatherId = cursor.getInt(INDEX_WEATHER_ID);
-                double high = cursor.getDouble(INDEX_MAX_TEMP);
-                double low = cursor.getDouble(INDEX_MIN_TEMP);
-                String desc = cursor.getString(INDEX_SHORT_DESC);
+                NotificationCompat.BigPictureStyle bigPictureStyle = new NotificationCompat.BigPictureStyle();
 
-                int iconId = Utility.getIconResourceForWeatherCondition(weatherId);
-                String title = context.getString(R.string.app_name);
+                String title = cursor.getString(INDEX_TITLE);
+                String id = cursor.getString(INDEX_ID);
 
-                // Define the text of the forecast.
-                String contentText = String.format(context.getString(R.string.format_notification),
-                        desc,
-                        Utility.formatTemperature(context, high, Utility.isMetric(context)),
-                        Utility.formatTemperature(context, low, Utility.isMetric(context)));
+                try {
+                    String[] backdrops = new FetchBackdropsTask().execute(id).get();
+                    if (backdrops.length != 0) {
+                        if (lastBackdrop >= backdrops.length)
+                            lastBackdrop = 0;
+                        Bitmap bitmap = Picasso.with(getContext())
+                                .load(MovieContract.URL_PICTURE + backdrops[lastBackdrop])
+                                .get();
+                        bigPictureStyle.bigPicture(bitmap);
+                        bigPictureStyle.setBigContentTitle(title);
+                        bigPictureStyle.setSummaryText("Time to watch new movie!");
+                    }
+                } catch (InterruptedException | ExecutionException | IOException e) {
+                    e.printStackTrace();
+                }
 
-                //build your notification here.
-
-                if(Utility.isNotificationEnabled(context)) {
+                if (Utility.isNotificationEnabled(context)) {
                     NotificationCompat.Builder notif = new NotificationCompat.Builder(context)
-                            .setSmallIcon(iconId)
                             .setContentTitle(title)
-                            .setColor(R.color.sunshine_dark_blue)
-                            .setContentText(contentText);
+                            .setContentText("Time to watch new movie!")
+                            .setStyle(bigPictureStyle)
+                            .setSmallIcon(R.drawable.ic_notification)
+                            .setDefaults(Notification.DEFAULT_VIBRATE)
+                            .setSound(Uri.parse("android.resource://" +
+                                    context.getPackageName() + "/" +
+                                    R.raw.notification_sound)
+                            );
 
                     Intent resultIntent = new Intent(context, MainActivity.class);
                     TaskStackBuilder tsb = TaskStackBuilder.create(context);
@@ -207,16 +237,33 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
 
 
                     NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-                    notificationManager.notify(WEATHER_NOTIFICATION_ID, notif.build());
+                    notificationManager.notify(MOVIE_NOTIFICATION_ID, notif.build());
+                    //deleteOldRows(getContext(),"2");
                 }
                 //refreshing last sync
                 SharedPreferences.Editor editor = prefs.edit();
                 editor.putLong(lastNotificationKey, System.currentTimeMillis());
-                editor.commit();
+                editor.putInt(lastBackdropKey, ++lastBackdrop);
+                editor.apply();
             }
         }
 
-    }*/
+    }
+
+    /**
+     * Helper method to have the sync adapter sync immediately
+     *
+     * @param context The context used to access the account service
+     */
+    public static void syncImmediately(Context context, int page) {
+        Bundle bundle = new Bundle();
+        bundle.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
+        bundle.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
+        bundle.putInt(context.getString(R.string.bundle_page_key),page);
+        Account account = getSyncAccount(context);
+        ContentResolver.requestSync(account,
+                context.getString(R.string.content_authority), bundle);
+    }
 
     @Override
     public void onPerformSync(Account account, Bundle extras, String authority,
@@ -230,15 +277,18 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
         //ArrayList<MovieDescription> movies;
 
         final String MOVIE_BASE_URL = "http://api.themoviedb.org/3/movie/" + sortOrder;
-        final String MOVIE_BACKDROPS_URL = "http://api.themoviedb.org/3/movie/" + "/images?";
+        //final String MOVIE_BACKDROPS_URL = "http://api.themoviedb.org/3/movie/" + "/images?";
         final String API_KEY = "api_key";
         final String SORTING = "sort_by";
+        final String PAGE = "page";
 
-
+        String page = String.valueOf(
+                extras.getInt(getContext().getString(R.string.bundle_page_key),1));
         try {
             Uri uri = Uri.parse(MOVIE_BASE_URL).buildUpon()
                     .appendQueryParameter(SORTING, "vote_average.desc")
                     .appendQueryParameter(API_KEY, "277455b8532b51d0dd24b2446e50a0ad")
+                    .appendQueryParameter(PAGE, page)
                     .build();
 
             URL url = new URL(uri.toString());
@@ -284,21 +334,12 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
                 }
             }
         }
-        getMoviesFromJsonString(postersJsonStr);
+        getMoviesFromJsonString(postersJsonStr,page);
+        Intent intent = new Intent(SYNC_FINISHED);
+        getContext().sendBroadcast(intent);
     }
 
-    /**
-     * Helper method to have the sync adapter sync immediately
-     * @param context The context used to access the account service
-     */
-    public static void syncImmediately(Context context) {
-        Bundle bundle = new Bundle();
-        bundle.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
-        bundle.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
-        Account account = getSyncAccount(context);
-        ContentResolver.requestSync(account,
-                context.getString(R.string.content_authority), bundle);
-    }
+
 
     /**
      * Helper method to schedule the sync adapter periodic execution
@@ -334,7 +375,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
         /*
          * Finally, let's do a sync to get things started
          */
-        syncImmediately(context);
+        syncImmediately(context,20);
     }
 
     public static void initializeSyncAdapter(Context context) {
@@ -359,7 +400,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
                 context.getString(R.string.app_name), context.getString(R.string.sync_account_type));
 
         // If the password doesn't exist, the account doesn't exist
-        if ( null == accountManager.getPassword(newAccount) ) {
+        if (null == accountManager.getPassword(newAccount)) {
 
         /*
          * Add the account and account type, no password or user data
@@ -375,7 +416,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
              * here.
              */
 
-            onAccountCreated(newAccount,context);
+            onAccountCreated(newAccount, context);
         }
         return newAccount;
     }

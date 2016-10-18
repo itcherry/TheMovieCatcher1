@@ -66,11 +66,23 @@
     <string name="pref_title_ringtone">Ringtone</string>
     <string name="pref_ringtone_silent">Silent</string>
 
+    <string name="pref_last_notification">last_notification</string>
+    <string name="pref_last_backdrop">last_backdrop</string>
+    <string name="notification_preference">Notifications</string>
+    <string name="key_notification">notification_preference_key</string>
+    <string name="pref_summary_on">On</string>
+    <string name="pref_summary_off">Off</string>
+
     <string name="pref_title_vibrate">Vibrate</string>
     <string name="pref_sorting">Sorting</string>
     <string name="pref_sorting_key">sorting</string>
     <string name="menu_refresh">Refresh</string>
     <string name="pref_sorting_default">top_rated?</string>
     <string name="sync_account_type">moviecatcher.itcherry.com</string>
-
+    <string name="bundle_page_key">page_key</string>
+    <string name="pref_last_page">last_page</string>
+    <string name="pref_last_row_quantity">last_row_quantity</string>
+    <string name="loading_tv">Loading...</string>
+    <string name="pref_last_update_flag">last_update_flag</string>
+    pref_last_update_flag
 </resources>

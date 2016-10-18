@@ -37,18 +37,25 @@ public class MovieContract {
                 .build();
     }
 
+    public static Uri buildMovieUri(long id) {
+        return ContentUris.withAppendedId(CONTENT_URI, id);
+    }
+    public static Uri buildMoviePage(int page){
+        return CONTENT_URI.buildUpon()
+                .appendPath(PATH_PAGE_DELETING)
+                .appendPath(String.valueOf(page))
+                .build();
+    }
+
     public static String getProperSorting(String sortOrder){
         return sortOrder + " DESC";
     }
-
     //For UriMatcher
     public static final int URI_MOVIE = 1;
     public static final int URI_MOVIE_ID = 2;
     public static final int URI_MOVIE_WITH_SORTING = 3;
 
-    public static Uri buildMovieUri(long id) {
-        return ContentUris.withAppendedId(CONTENT_URI, id);
-    }
+    public static final int URI_MOVIE_WITH_PAGE = 4;
 
     //For storing images in the external storage
     private static final String FILE_DIR = "/.com.itcherry.moviecatcher";
@@ -85,6 +92,8 @@ public class MovieContract {
     public static final String COLUMN_VOTE_AVERAGE = "vote_average";
     public static final String COLUMN_VOTE_COUNT = "vote_count";
     public static final String COLUMN_IS_FAVOURITE = "is_favourite";
+    public static final String COLUMN_PAGE = "page";
 
     public final static String URL_PICTURE = "http://image.tmdb.org/t/p/w500/";
+    public final static String PATH_PAGE_DELETING = "deletepage";
 }

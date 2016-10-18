@@ -8,6 +8,7 @@ import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_ID;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_IMAGE_URL;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_IS_FAVOURITE;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_OVERVIEW;
+import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_PAGE;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_POPULARITY;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_RELEASE_DATE;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_TITLE;
@@ -31,6 +32,7 @@ public class MovieDbHelper extends SQLiteOpenHelper{
             COLUMN_VOTE_AVERAGE + " REAL NOT NULL," +
             COLUMN_VOTE_COUNT + " INTEGER NOT NULL," +
             COLUMN_IS_FAVOURITE + " INTEGER DEFAULT 0," +
+            COLUMN_PAGE + " INTEGER NOT NULL," +
             "UNIQUE ( " + COLUMN_ID + ") ON CONFLICT REPLACE);";
 
     private static final String SQL_ON_UPGRADE = "DROP TABLE IF EXISTS" + TABLE_NAME;

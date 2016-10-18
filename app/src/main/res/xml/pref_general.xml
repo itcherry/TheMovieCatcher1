@@ -7,4 +7,11 @@
         android:entries="@array/pref_sort_options"
         android:entryValues="@array/pref_sort_values" />
 
+    <SwitchPreference
+        android:key="@string/key_notification"
+        android:title="@string/notification_preference"
+        android:defaultValue="@string/pref_summary_on"
+        android:summaryOn="@string/pref_summary_on"
+        android:summaryOff="@string/pref_summary_off" />
+
 </PreferenceScreen>

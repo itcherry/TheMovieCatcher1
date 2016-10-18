@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.util.Log;
 
+import com.itcherry.themoviecatcher.PostersFragment;
+
 public class MovieCatcherSyncService extends Service {
     private static final Object sSyncAdapterLock = new Object();
     private static MovieCatcherSyncAdapter sSyncAdapter = null;
@@ -29,6 +31,7 @@ public class MovieCatcherSyncService extends Service {
     @Override
     public void onDestroy() {
         Log.d("SunshineSyncService","OnDestroy - SunshineSyncService");
+        PostersFragment.setUpdateFlag(true);
         //ForecastFragment.stopSwipeRefresh();
         super.onDestroy();
     }

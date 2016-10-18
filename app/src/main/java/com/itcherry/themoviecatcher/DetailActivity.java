@@ -23,7 +23,6 @@ public class DetailActivity extends ActionBarActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
-
         String id = getIntent().getData().getLastPathSegment();
 
         try {
@@ -53,6 +52,7 @@ public class DetailActivity extends ActionBarActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         return super.onCreateOptionsMenu(menu);
+
     }
 
     @Override
