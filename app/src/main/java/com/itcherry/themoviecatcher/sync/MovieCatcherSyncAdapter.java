@@ -48,6 +48,7 @@ import java.util.concurrent.ExecutionException;
 
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_ID;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_IMAGE_URL;
+import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_IS_FAVOURITE;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_OVERVIEW;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_PAGE;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_POPULARITY;
@@ -158,19 +159,23 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
                 uri,
                 new String[]{COLUMN_IMAGE_URL},null,null,null);
         if(cursor != null) {
-            while (cursor.moveToNext()) {
-                File file = MovieContract.getDirForImages(
-                        cursor.getString(cursor.getColumnIndex(COLUMN_IMAGE_URL)),
-                        context);
-                if (file.exists()) { //Если файл или директория существует
-                    String deleteCmd = "rm -r " + file.getAbsolutePath(); //Создаем текстовую командную строку
-                    Runtime runtime = Runtime.getRuntime();
-                    try {
-                        runtime.exec(deleteCmd); //Выполняем системные команды
-                    } catch (IOException e) {
-                        e.printStackTrace();
+            cursor.moveToFirst();
+            while (!cursor.isLast()) {
+                if(cursor.getInt(cursor.getColumnIndex(COLUMN_IS_FAVOURITE)) == 0) {
+                    File file = MovieContract.getDirForImages(
+                            cursor.getString(cursor.getColumnIndex(COLUMN_IMAGE_URL)),
+                            context);
+                    if (file.exists()) { //Если файл или директория существует
+                        String deleteCmd = "rm -r " + file.getAbsolutePath(); //Создаем текстовую командную строку
+                        Runtime runtime = Runtime.getRuntime();
+                        try {
+                            runtime.exec(deleteCmd); //Выполняем системные команды
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
+                cursor.moveToNext();
             }
         }
         int deleted = context.getContentResolver().delete(

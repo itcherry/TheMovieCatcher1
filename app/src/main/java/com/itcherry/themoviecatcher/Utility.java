@@ -33,6 +33,8 @@ public class Utility {
                 return MovieContract.COLUMN_VOTE_AVERAGE;
             case "popular?":
                 return MovieContract.COLUMN_POPULARITY;
+            case "favourite?":
+                return MovieContract.COLUMN_IS_FAVOURITE;
             default:
                 throw new IllegalArgumentException("Unknown sort order parameter");
         }

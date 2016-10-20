@@ -183,6 +183,8 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
             lastPage = 1;
             lastRowQuantity = 20;
             MovieCatcherSyncAdapter.deleteOldRows(getActivity(),"1");
+        }else if(item.getItemId() == R.id.menu_refresh_loader){
+            getLoaderManager().restartLoader(MY_CURSOR_LOADER_ID,null,this);
         }
         return super.onOptionsItemSelected(item);
     }
@@ -190,14 +192,18 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
     @Override
     public Loader onCreateLoader(int id, Bundle args) {
         String sortOrder = getFriendlySortingFromPreferences(getActivity());
-
-        return new CursorLoader(getActivity(),
-                MovieContract.buildMovieSorting(
-                        sortOrder,
-                        String.valueOf(lastRowQuantity)
-                ),
-                null, null, null,
-                null);
+        Uri uri;
+        if(sortOrder.equals(MovieContract.COLUMN_IS_FAVOURITE)){
+            uri = MovieContract.buildMovieFavourites();
+        }else{
+            uri = MovieContract.buildMovieSorting(
+                    sortOrder,
+                    String.valueOf(lastRowQuantity)
+            );
+        }
+        return new CursorLoader(
+                getActivity(),
+                uri, null, null, null, null);
     }
 
     @Override

@@ -26,6 +26,7 @@ import static com.itcherry.themoviecatcher.data.MovieContract.PATH;
 import static com.itcherry.themoviecatcher.data.MovieContract.PATH_PAGE_DELETING;
 import static com.itcherry.themoviecatcher.data.MovieContract.TABLE_NAME;
 import static com.itcherry.themoviecatcher.data.MovieContract.URI_MOVIE;
+import static com.itcherry.themoviecatcher.data.MovieContract.URI_MOVIE_FAVOURITES;
 import static com.itcherry.themoviecatcher.data.MovieContract.URI_MOVIE_ID;
 import static com.itcherry.themoviecatcher.data.MovieContract.URI_MOVIE_WITH_PAGE;
 import static com.itcherry.themoviecatcher.data.MovieContract.URI_MOVIE_WITH_SORTING;
@@ -49,6 +50,7 @@ public class MovieProvider extends ContentProvider {
         UriMatcher retUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
         retUriMatcher.addURI(CONTENT_AUTHORITY, PATH, URI_MOVIE);
+        retUriMatcher.addURI(CONTENT_AUTHORITY, PATH + "/favourites", URI_MOVIE_FAVOURITES);
         retUriMatcher.addURI(CONTENT_AUTHORITY, PATH + "/#", URI_MOVIE_ID);
         //first * for sorting, second * for limit
         retUriMatcher.addURI(CONTENT_AUTHORITY, PATH + "/"+ PATH_PAGE_DELETING + "/#", URI_MOVIE_WITH_PAGE);
@@ -126,6 +128,13 @@ public class MovieProvider extends ContentProvider {
                     selection = selection + " AND " + MovieContract.COLUMN_ID + " = " + id;
                 }
                 break;
+            case URI_MOVIE_FAVOURITES:
+                if (TextUtils.isEmpty(selection)) {
+                    selection = MovieContract.COLUMN_IS_FAVOURITE + " = 1";
+                } else {
+                    selection = selection + " AND " + MovieContract.COLUMN_ID + " = 1";
+                }
+                break;
             default:
                 throw new IllegalArgumentException("Unknown URI : " + uri);
         }
@@ -194,9 +203,11 @@ public class MovieProvider extends ContentProvider {
             case URI_MOVIE_WITH_PAGE:
                 String page = uri.getLastPathSegment();
                 if (TextUtils.isEmpty(selection)) {
-                    selection = MovieContract.COLUMN_PAGE + " >= " + page;
+                    selection = MovieContract.COLUMN_PAGE + " >= " + page +
+                            " AND " + MovieContract.COLUMN_IS_FAVOURITE + " = 0";
                 } else {
-                    selection = selection + " AND " + MovieContract.COLUMN_PAGE + " >= " + page;
+                    selection = selection + " AND " + MovieContract.COLUMN_PAGE + " >= " + page +
+                            " AND " + MovieContract.COLUMN_IS_FAVOURITE + " = 0";
                 }
                 break;
             default:

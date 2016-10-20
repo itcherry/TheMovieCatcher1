@@ -46,12 +46,15 @@ public class DetailActivity extends ActionBarActivity {
                     .add(R.id.movie_detail_container, df)
                     .commit();
         }
-
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        //getMenuInflater().inflate(R.menu.detail_fragment,menu);
+        //MenuInflater inflater = getMenuInflater();
+        //inflater.inflate(R.menu.detail_fragment, menu);
         return super.onCreateOptionsMenu(menu);
+        //return super.onCreateOptionsMenu(menu);
 
     }
 

@@ -46,6 +46,9 @@ public class MovieContract {
                 .appendPath(String.valueOf(page))
                 .build();
     }
+    public static Uri buildMovieFavourites(){
+        return CONTENT_URI.buildUpon().appendPath("favourites").build();
+    }
 
     public static String getProperSorting(String sortOrder){
         return sortOrder + " DESC";
@@ -54,8 +57,8 @@ public class MovieContract {
     public static final int URI_MOVIE = 1;
     public static final int URI_MOVIE_ID = 2;
     public static final int URI_MOVIE_WITH_SORTING = 3;
-
     public static final int URI_MOVIE_WITH_PAGE = 4;
+    public static final int URI_MOVIE_FAVOURITES = 5;
 
     //For storing images in the external storage
     private static final String FILE_DIR = "/.com.itcherry.moviecatcher";
