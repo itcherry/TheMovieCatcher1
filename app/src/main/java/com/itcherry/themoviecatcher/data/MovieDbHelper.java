@@ -51,4 +51,5 @@ public class MovieDbHelper extends SQLiteOpenHelper{
         db.execSQL(SQL_ON_UPGRADE);
         onCreate(db);
     }
+
 }

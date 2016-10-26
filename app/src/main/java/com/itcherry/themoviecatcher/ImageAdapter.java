@@ -11,7 +11,9 @@ import android.widget.GridView;
 import android.widget.ImageView;
 
 import com.itcherry.themoviecatcher.data.MovieContract;
+import com.itcherry.themoviecatcher.sync.MovieCatcherSyncAdapter;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
@@ -28,7 +30,7 @@ public class ImageAdapter extends CursorAdapter {
         ImageView iv = new ImageView(context);
         iv.setLayoutParams(new GridView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT
-                ,ViewGroup.LayoutParams.MATCH_PARENT));
+                , ViewGroup.LayoutParams.MATCH_PARENT));
         iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
         return iv;
     }
@@ -37,17 +39,27 @@ public class ImageAdapter extends CursorAdapter {
     public void bindView(View view, Context context, Cursor cursor) {
         FileInputStream inputStream;
         try {
-            inputStream = new FileInputStream(
-                    MovieContract.getDirForImages(
-                            cursor.getString(cursor.getColumnIndex(
-                                    MovieContract.COLUMN_IMAGE_URL)),
-                            context
-                    )
-            );
+            File file;
+            String filename = cursor.getString(cursor.getColumnIndex(
+                    MovieContract.COLUMN_IMAGE_URL));
+            if (!(file = MovieContract.getDirForImages(filename, context)).exists()) {
+                NotificationService.deleteOldRows(context,"1");
+                MovieCatcherSyncAdapter.syncImmediately(context,1);
+                /*Toast.makeText(
+                        context,
+                        "Wait a second, somebody had deleted photos from storage",
+                        Toast.LENGTH_SHORT).show();*/
+                PostersFragment.setUpdateFlag(false);
+                Utility.setRowQuantityFromPreferences(context,20);
+                Utility.setPageQuantityFromPreferences(context,1);
+            }
+
+            inputStream = new FileInputStream(file);
 
             Bitmap bmp = BitmapFactory.decodeStream(inputStream);
             ((ImageView) view).setImageBitmap(bmp);
             inputStream.close();
+
         } catch (IOException e) {
             e.printStackTrace();
         }

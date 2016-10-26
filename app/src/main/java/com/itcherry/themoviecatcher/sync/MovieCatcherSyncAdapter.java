@@ -2,30 +2,20 @@ package com.itcherry.themoviecatcher.sync;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.AbstractThreadedSyncAdapter;
 import android.content.ContentProviderClient;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.SyncRequest;
 import android.content.SyncResult;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.TaskStackBuilder;
 import android.util.Log;
 
-import com.itcherry.themoviecatcher.FetchBackdropsTask;
-import com.itcherry.themoviecatcher.MainActivity;
 import com.itcherry.themoviecatcher.R;
 import com.itcherry.themoviecatcher.Utility;
 import com.itcherry.themoviecatcher.data.MovieContract;
@@ -36,7 +26,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,11 +33,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Vector;
-import java.util.concurrent.ExecutionException;
 
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_ID;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_IMAGE_URL;
-import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_IS_FAVOURITE;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_OVERVIEW;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_PAGE;
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_POPULARITY;
@@ -70,16 +57,6 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
     public static final long SYNC_INTERVAL = 60L * 180L;
     public static final long SYNC_FLEXTIME = SYNC_INTERVAL / 3;
     public static final String SYNC_FINISHED = "sync_finished";
-    private static final long DAY_IN_MILLIS = 1000 * 60 * 3;//1000 * 60 * 60 * 24;
-    private static final int MOVIE_NOTIFICATION_ID = 3004;
-
-    private static final String[] NOTIFY_MOVIE_PROJECTION = new String[]{
-            MovieContract.COLUMN_ID,
-            MovieContract.COLUMN_TITLE,
-    };
-    // these indices must match the projection
-    private static final int INDEX_ID = 0;
-    private static final int INDEX_TITLE = 1;
 
     /**
      * Take the String representing the complete forecast in JSON Format and
@@ -127,16 +104,19 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
 
                 cVVector.add(cv);
 
-                Bitmap bitmap = Picasso.with(getContext())
-                        .load(MovieContract.URL_PICTURE + object.getString(POSTER_IMAGE_URL))
-                        .get();
-                FileOutputStream streamWriter = new FileOutputStream(
-                        getDirForImages(object.getString(POSTER_IMAGE_URL), getContext())
-                );
+                String imageUrl = object.getString(POSTER_IMAGE_URL);
+                if(!MovieContract.getDirForImages(imageUrl,getContext()).exists()) {
+                    Bitmap bitmap = Picasso.with(getContext())
+                            .load(MovieContract.URL_PICTURE + imageUrl)
+                            .get();
+                    FileOutputStream streamWriter = new FileOutputStream(
+                            getDirForImages(imageUrl, getContext())
+                    );
 
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, streamWriter);
-                streamWriter.flush();
-                streamWriter.close();
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, streamWriter);
+                    streamWriter.flush();
+                    streamWriter.close();
+                }
             }
 
             int inserted = 0;
@@ -144,115 +124,12 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
                 ContentValues[] arrayCV = new ContentValues[cVVector.size()];
                 cVVector.toArray(arrayCV);
                 inserted = getContext().getContentResolver().bulkInsert(MovieContract.CONTENT_URI, arrayCV);
-                notifyMovies();
             }
         } catch (JSONException e) {
             Log.e(LOG_TAG, e.getMessage());
         } catch (IOException e) {
             e.printStackTrace();
         }
-        //return result;
-    }
-    public static void deleteOldRows(Context context, String page){
-        Uri uri = MovieContract.buildMoviePage(Integer.parseInt(page));
-        Cursor cursor = context.getContentResolver().query(
-                uri,
-                new String[]{COLUMN_IMAGE_URL},null,null,null);
-        if(cursor != null) {
-            cursor.moveToFirst();
-            while (!cursor.isLast()) {
-                if(cursor.getInt(cursor.getColumnIndex(COLUMN_IS_FAVOURITE)) == 0) {
-                    File file = MovieContract.getDirForImages(
-                            cursor.getString(cursor.getColumnIndex(COLUMN_IMAGE_URL)),
-                            context);
-                    if (file.exists()) { //Если файл или директория существует
-                        String deleteCmd = "rm -r " + file.getAbsolutePath(); //Создаем текстовую командную строку
-                        Runtime runtime = Runtime.getRuntime();
-                        try {
-                            runtime.exec(deleteCmd); //Выполняем системные команды
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-                cursor.moveToNext();
-            }
-        }
-        int deleted = context.getContentResolver().delete(
-                MovieContract.buildMoviePage(Integer.parseInt(page)),null,null);
-
-    }
-    private void notifyMovies() {
-        Context context = getContext();
-        //checking the last update and notify if it' the first of the day
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        String lastNotificationKey = context.getString(R.string.pref_last_notification);
-        String lastBackdropKey = context.getString(R.string.pref_last_backdrop);
-        int lastBackdrop = prefs.getInt(lastBackdropKey, 0);
-        long lastSync = prefs.getLong(lastNotificationKey, 0);
-
-        if (System.currentTimeMillis() - lastSync >= DAY_IN_MILLIS) {
-            // Last sync was more than 1 day ago, let's send a notification with the weather.
-
-            Uri movieUri = MovieContract.buildMovieSorting("popularity", "1");
-
-            // we'll query our contentProvider, as always
-            Cursor cursor = context.getContentResolver().query(movieUri, NOTIFY_MOVIE_PROJECTION, null, null, null);
-
-            if (cursor.moveToFirst()) {
-                NotificationCompat.BigPictureStyle bigPictureStyle = new NotificationCompat.BigPictureStyle();
-
-                String title = cursor.getString(INDEX_TITLE);
-                String id = cursor.getString(INDEX_ID);
-
-                try {
-                    String[] backdrops = new FetchBackdropsTask().execute(id).get();
-                    if (backdrops.length != 0) {
-                        if (lastBackdrop >= backdrops.length)
-                            lastBackdrop = 0;
-                        Bitmap bitmap = Picasso.with(getContext())
-                                .load(MovieContract.URL_PICTURE + backdrops[lastBackdrop])
-                                .get();
-                        bigPictureStyle.bigPicture(bitmap);
-                        bigPictureStyle.setBigContentTitle(title);
-                        bigPictureStyle.setSummaryText("Time to watch new movie!");
-                    }
-                } catch (InterruptedException | ExecutionException | IOException e) {
-                    e.printStackTrace();
-                }
-
-                if (Utility.isNotificationEnabled(context)) {
-                    NotificationCompat.Builder notif = new NotificationCompat.Builder(context)
-                            .setContentTitle(title)
-                            .setContentText("Time to watch new movie!")
-                            .setStyle(bigPictureStyle)
-                            .setSmallIcon(R.drawable.ic_notification)
-                            .setDefaults(Notification.DEFAULT_VIBRATE)
-                            .setSound(Uri.parse("android.resource://" +
-                                    context.getPackageName() + "/" +
-                                    R.raw.notification_sound)
-                            );
-
-                    Intent resultIntent = new Intent(context, MainActivity.class);
-                    TaskStackBuilder tsb = TaskStackBuilder.create(context);
-                    tsb.addNextIntent(resultIntent);
-                    PendingIntent resultPendingIntent = tsb.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
-
-                    notif.setContentIntent(resultPendingIntent);
-
-
-                    NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-                    notificationManager.notify(MOVIE_NOTIFICATION_ID, notif.build());
-                    //deleteOldRows(getContext(),"2");
-                }
-                //refreshing last sync
-                SharedPreferences.Editor editor = prefs.edit();
-                editor.putLong(lastNotificationKey, System.currentTimeMillis());
-                editor.putInt(lastBackdropKey, ++lastBackdrop);
-                editor.apply();
-            }
-        }
-
     }
 
     /**

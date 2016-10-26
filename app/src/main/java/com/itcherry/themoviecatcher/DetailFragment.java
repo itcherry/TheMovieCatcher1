@@ -87,7 +87,6 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
                 public void onClick(View v) {
                     switch (v.getId()) {
                         case R.id.menu_favourite_star:
-                            //item.setChecked(!item.isChecked());
                             ContentValues cv = new ContentValues();
                             if (((CheckBox)v).isChecked()) {
                                 Log.d("/D", "uri : " + mUri + " ; is favourite");
@@ -105,27 +104,6 @@ public class DetailFragment extends Fragment implements LoaderManager.LoaderCall
         }
         //menu.getItem(R.id.menu_favourite_star).setChecked(isCheckedStar);
     }
-
-    /*@Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        Log.d("LOG_TAG", "fragment, pressed menu");
-        switch (item.getItemId()) {
-            case R.id.menu_favourite_star:
-                //item.setChecked(!item.isChecked());
-                ContentValues cv = new ContentValues();
-                if (item.isChecked()) {
-                    Log.d("/D", "uri : " + mUri + " ; is favourite");
-                    cv.put(MovieContract.COLUMN_IS_FAVOURITE, 1);
-                    getActivity().getContentResolver().update(mUri, cv, null, null);
-                } else {
-                    Log.d("/D", "uri : " + mUri + " ; is not favourite");
-                    cv.put(MovieContract.COLUMN_IS_FAVOURITE, 0);
-                    getActivity().getContentResolver().update(mUri, cv, null, null);
-                }
-                return true;
-        }
-        return false;
-    }*/
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {

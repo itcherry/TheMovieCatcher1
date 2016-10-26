@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "337367318943",
+    "firebase_url": "https://themoviecatcher.firebaseio.com",
+    "project_id": "themoviecatcher",
+    "storage_bucket": "themoviecatcher.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:337367318943:android:c8e26f1fec4756d4",
+        "android_client_info": {
+          "package_name": "com.itcherry.themoviecatcher"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "337367318943-3mb18lhfh2ogokm4faciesmbufinm0r5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWyTSb418QhnLWbuFrTRqbJHhbaSFVXU4"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
