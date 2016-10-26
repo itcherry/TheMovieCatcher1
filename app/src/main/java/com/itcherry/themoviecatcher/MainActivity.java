@@ -30,6 +30,7 @@ public class MainActivity extends ActionBarActivity implements PostersFragment.C
                     .add(R.id.main_fragment, new PostersFragment())
                     .commit();
         MovieCatcherSyncAdapter.initializeSyncAdapter(this);
+        Utility.setNetworkStateFromPreferences(this,Utility.isNetworkConnected(this));
         setAlarm();
     }
 

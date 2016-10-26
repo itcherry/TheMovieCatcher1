@@ -57,7 +57,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
     public static final long SYNC_INTERVAL = 60L * 180L;
     public static final long SYNC_FLEXTIME = SYNC_INTERVAL / 3;
     public static final String SYNC_FINISHED = "sync_finished";
-
+    public static final String SYNC_ERROR_INTENT_EXTRA = "sync_error";
     /**
      * Take the String representing the complete forecast in JSON Format and
      * pull out the data we need to construct the Strings needed for the wireframes.
@@ -183,6 +183,9 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
             StringBuffer buffer = new StringBuffer();
             if (inputStream == null) {
                 // Nothing to do.
+                Intent intent = new Intent(SYNC_FINISHED);
+                intent.putExtra(SYNC_ERROR_INTENT_EXTRA,true);
+                getContext().sendBroadcast(intent);
                 return;
             }
             reader = new BufferedReader(new InputStreamReader(inputStream));
@@ -197,12 +200,18 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
 
             if (buffer.length() == 0) {
                 // Stream was empty.  No point in parsing.
+                Intent intent = new Intent(SYNC_FINISHED);
+                intent.putExtra(SYNC_ERROR_INTENT_EXTRA,true);
+                getContext().sendBroadcast(intent);
                 return;
             }
             postersJsonStr = buffer.toString();
 
         } catch (IOException e) {
             Log.e(LOG_TAG, e.getMessage());
+            Intent intent = new Intent(SYNC_FINISHED);
+            intent.putExtra(SYNC_ERROR_INTENT_EXTRA,true);
+            getContext().sendBroadcast(intent);
             return;
         } finally {
             if (urlConnection != null) {

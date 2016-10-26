@@ -1,15 +1,21 @@
 package com.itcherry.themoviecatcher;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.LinearLayout;
 
 import com.itcherry.themoviecatcher.data.MovieContract;
-
-import java.net.InetAddress;
 
 
 public class Utility {
@@ -52,6 +58,10 @@ public class Utility {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         return prefs.getInt(context.getString(R.string.pref_last_page),1);
     }
+    public static boolean getNetworkStateFromPreference(Context context){
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        return prefs.getBoolean(context.getString(R.string.pref_is_connected_to_network),false);
+    }
     public static void setPageQuantityFromPreferences(Context context, int pageQuantity){
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         SharedPreferences.Editor editor = prefs.edit();
@@ -66,6 +76,14 @@ public class Utility {
                 rowQuantity);
         editor.apply();
     }
+    public static void setNetworkStateFromPreferences(Context context, boolean isConnected){
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean(
+                context.getString(R.string.pref_is_connected_to_network),
+                isConnected);
+        editor.apply();
+    }
     public static boolean isNetworkConnected(Context context) {
         ConnectivityManager cm =
                 (ConnectivityManager)  context.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -75,7 +93,45 @@ public class Utility {
                 && activeNetwork.isConnectedOrConnecting();
     }
 
-    public static boolean isInternetAvailable() {
+    public static View getEmptyView(final Activity activity, LayoutInflater inflater, ViewGroup container) {
+        View emptyView;
+        emptyView = inflater.inflate(R.layout.no_network_layout, container, false);
+        if (Utility.isNetworkConnected(activity)) {
+            emptyView.findViewById(R.id.empty_layout).setVisibility(View.VISIBLE);
+            emptyView.findViewById(R.id.no_network_layout).setVisibility(View.GONE);
+        } else {
+            emptyView.findViewById(R.id.empty_layout).setVisibility(View.GONE);
+            emptyView.findViewById(R.id.no_network_layout).setVisibility(View.VISIBLE);
+
+        }
+        Button showNetworkButton = (Button) emptyView.findViewById(R.id.open_network_button);
+        showNetworkButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent();
+                intent.setClassName("com.android.settings",
+                        "com.android.settings.Settings$DataUsageSummaryActivity");
+                activity.startActivity(intent);
+            }
+        });
+        Button showWifiButton = (Button) emptyView.findViewById(R.id.open_wifi_button);
+        showWifiButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(Settings.ACTION_WIFI_SETTINGS);
+                activity.startActivity(intent);
+            }
+        });
+
+        activity.addContentView(emptyView,
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT)
+        );
+        return emptyView;
+    }
+
+    /*public static boolean isInternetAvailable() {
         try {
             InetAddress ipAddr = InetAddress.getByName("google.com"); //You can replace it with your name
             return !ipAddr.equals("");
@@ -84,5 +140,5 @@ public class Utility {
             return false;
         }
 
-    }
+    }*/
 }

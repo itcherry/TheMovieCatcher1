@@ -6,9 +6,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
+import android.net.ConnectivityManager;
 import android.net.Uri;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
@@ -21,14 +22,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.GridView;
-import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import com.itcherry.themoviecatcher.data.MovieContract;
 import com.itcherry.themoviecatcher.sync.MovieCatcherSyncAdapter;
 
 import static com.itcherry.themoviecatcher.Utility.getFriendlySortingFromPreferences;
+import static com.itcherry.themoviecatcher.Utility.isNetworkConnected;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -36,11 +37,15 @@ import static com.itcherry.themoviecatcher.Utility.getFriendlySortingFromPrefere
 public class PostersFragment extends Fragment implements LoaderManager.LoaderCallbacks {
     private GridView gridView;
     private View mFooter;
+    private View mFooterNoNetwork;
     private ImageAdapter mMovieAdapter;
-    private static final int MY_CURSOR_LOADER_ID = 1;
+    public static final int MY_CURSOR_LOADER_ID = 1;
     private static boolean updateFlag = true;
     private int lastPage;
     private int lastRowQuantity;
+    private IntentFilter mNetworkChangeIntentFilter;
+
+    //private SyncFinishedReceiver syncFinishedReceiver;
 
     public PostersFragment() {
         // Required empty public constructor
@@ -68,6 +73,7 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
         super.onDestroy();
         Log.d("LOG_TAG", "onDestroyFragment");
         getActivity().unregisterReceiver(syncFinishedReceiver);
+        getActivity().unregisterReceiver(networkChangeReceiver);
     }
 
     @Override
@@ -97,7 +103,7 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
                 sortOrder
         );
 
-        gridView.setEmptyView(getEmptyViewForGridView(getActivity().getLayoutInflater(), container));
+        gridView.setEmptyView(Utility.getEmptyView(getActivity(),getActivity().getLayoutInflater(), container));
 
         mMovieAdapter = new ImageAdapter(getActivity(), cursor, false);
         gridView.setAdapter(mMovieAdapter);
@@ -118,6 +124,20 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
 
         mFooter = v.findViewById(R.id.footer_view_id);
         mFooter.setVisibility(View.GONE);
+        mFooterNoNetwork = v.findViewById(R.id.no_network_footer);
+        mFooterNoNetwork.setVisibility(View.GONE);
+        v.findViewById(R.id.footer_view_no_network_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (Utility.isNetworkConnected(getActivity())) {
+                    mFooter.setVisibility(View.VISIBLE);
+                    mFooterNoNetwork.setVisibility(View.GONE);
+                } else {
+                    mFooter.setVisibility(View.GONE);
+                    mFooterNoNetwork.setVisibility(View.VISIBLE);
+                }
+            }
+        });
         gridView.setOnScrollListener(new AbsListView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(AbsListView view, int scrollState) {
@@ -133,9 +153,13 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
                         getUpdateFlag()) {
 
                     setUpdateFlag(false);
-                    mFooter.setVisibility(View.VISIBLE);
-                    MovieCatcherSyncAdapter.syncImmediately(getActivity(), ++lastPage);
-                    lastRowQuantity += 20;
+                    if (Utility.isNetworkConnected(getActivity())) {
+                        mFooter.setVisibility(View.VISIBLE);
+                        MovieCatcherSyncAdapter.syncImmediately(getActivity(), ++lastPage);
+                        lastRowQuantity += 20;
+                    } else {
+                        mFooterNoNetwork.setVisibility(View.VISIBLE);
+                    }
                 }
             }
         });
@@ -144,42 +168,42 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
         return v;
     }
 
-    private View getEmptyViewForGridView(LayoutInflater inflater, ViewGroup container) {
+    /*public View getEmptyView(LayoutInflater inflater, ViewGroup container) {
         View emptyView;
-        emptyView = inflater.inflate(R.layout.grid_view_empty_layout, container, false);
+        emptyView = inflater.inflate(R.layout.no_network_layout, container, false);
         if (Utility.isNetworkConnected(getActivity())) {
             emptyView.findViewById(R.id.empty_layout).setVisibility(View.VISIBLE);
             emptyView.findViewById(R.id.no_network_layout).setVisibility(View.GONE);
         } else {
             emptyView.findViewById(R.id.empty_layout).setVisibility(View.GONE);
             emptyView.findViewById(R.id.no_network_layout).setVisibility(View.VISIBLE);
-            Button showNetworkButton = (Button) emptyView.findViewById(R.id.open_network_button);
-            showNetworkButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Intent intent = new Intent();
-                    intent.setClassName("com.android.settings",
-                            "com.android.settings.Settings$DataUsageSummaryActivity");
-                    startActivity(intent);
-                }
-            });
-            Button showWifiButton = (Button) emptyView.findViewById(R.id.open_wifi_button);
-            showWifiButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Intent intent = new Intent(Settings.ACTION_WIFI_SETTINGS);
-                    startActivity(intent);
-                }
-            });
 
         }
+        Button showNetworkButton = (Button) emptyView.findViewById(R.id.open_network_button);
+        showNetworkButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent();
+                intent.setClassName("com.android.settings",
+                        "com.android.settings.Settings$DataUsageSummaryActivity");
+                startActivity(intent);
+            }
+        });
+        Button showWifiButton = (Button) emptyView.findViewById(R.id.open_wifi_button);
+        showWifiButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(Settings.ACTION_WIFI_SETTINGS);
+                startActivity(intent);
+            }
+        });
         getActivity().addContentView(emptyView,
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT)
         );
         return emptyView;
-    }
+    }*/
 
     public static void setUpdateFlag(boolean flag) {
         updateFlag = flag;
@@ -194,56 +218,59 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
         super.onResume();
 
         getActivity().registerReceiver(syncFinishedReceiver, new IntentFilter(MovieCatcherSyncAdapter.SYNC_FINISHED));
-        if (!getUpdateFlag() && mFooter.getVisibility() == View.GONE) {
+        getActivity().registerReceiver(networkChangeReceiver, mNetworkChangeIntentFilter);
+        /*if (!getUpdateFlag() && mFooter.getVisibility() == View.GONE) {
             // last item in grid not on the screen, show footer:
             mFooter.setVisibility(View.VISIBLE);
-        }
+        }*/
         getLoaderManager().restartLoader(MY_CURSOR_LOADER_ID, null, this);
-    }
-
-    private void checkEmptyView() {
-        if (!Utility.isNetworkConnected(getActivity())) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-
-                    do {
-                    }
-                    while (!Utility.isNetworkConnected(getActivity()) && MainActivity.sIsActive);
-                    if(MainActivity.sIsActive)
-                    getActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            gridView.getEmptyView().findViewById(R.id.empty_layout).setVisibility(View.VISIBLE);
-                            gridView.getEmptyView().findViewById(R.id.no_network_layout).setVisibility(View.GONE);
-                            MovieCatcherSyncAdapter.syncImmediately(getActivity(), 1);
-                        }
-                    });
-
-                }
-            }).start();
-        }
     }
 
     private BroadcastReceiver syncFinishedReceiver = new BroadcastReceiver() {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-
-            if (mFooter.getVisibility() != View.GONE) {
-                // last item in grid not on the screen, hide footer:
-                mFooter.setVisibility(View.GONE);
+            if (!intent.hasExtra(MovieCatcherSyncAdapter.SYNC_ERROR_INTENT_EXTRA)) {
+                if (mFooter.getVisibility() != View.GONE) {
+                    // last item in grid not on the screen, hide footer:
+                    mFooter.setVisibility(View.GONE);
+                }
+                getLoaderManager().restartLoader(MY_CURSOR_LOADER_ID, null, PostersFragment.this);
+                gridView.invalidateViews();
+            } else {
+                Toast.makeText(getActivity(), "Error while loading from server", Toast.LENGTH_SHORT).show();
             }
-            getLoaderManager().restartLoader(MY_CURSOR_LOADER_ID, null, PostersFragment.this);
-            gridView.invalidateViews();
+        }
+    };
+    private BroadcastReceiver networkChangeReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (isNetworkConnected(context)) {
+                gridView.getEmptyView().findViewById(R.id.empty_layout).setVisibility(View.VISIBLE);
+                gridView.getEmptyView().findViewById(R.id.no_network_layout).setVisibility(View.GONE);
+                if (!getUpdateFlag()) {
+                    mFooterNoNetwork.setVisibility(View.GONE);
+                    mFooter.setVisibility(View.VISIBLE);
+                    setUpdateFlag(true);
+                    getLoaderManager().restartLoader(MY_CURSOR_LOADER_ID,null,PostersFragment.this);
+                } else {
+                    MovieCatcherSyncAdapter.syncImmediately(getActivity(), 1);
+                }
+            } else {
+                gridView.getEmptyView().findViewById(R.id.empty_layout).setVisibility(View.GONE);
+                gridView.getEmptyView().findViewById(R.id.no_network_layout).setVisibility(View.VISIBLE);
+
+            }
         }
     };
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        if(gridView != null && gridView.getCount() == 0)
-            checkEmptyView();
+        mNetworkChangeIntentFilter = new IntentFilter();
+        mNetworkChangeIntentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+        mNetworkChangeIntentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+
         getLoaderManager().initLoader(MY_CURSOR_LOADER_ID, null, this);
     }
 

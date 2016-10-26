@@ -45,13 +45,19 @@
         android:background="#BDBDBD"
         android:gravity="center"
         android:padding="8dp">
-        <ProgressBar
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/loading_tv"/>
+            android:text="@string/no_network_tv"
+            android:layout_weight="1"
+            android:gravity="center"/>
+
+        <Button
+            android:id="@+id/footer_view_no_network_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/no_network_footer_button_text"
+            android:layout_weight="1"/>
 
     </LinearLayout>
 </LinearLayout>
