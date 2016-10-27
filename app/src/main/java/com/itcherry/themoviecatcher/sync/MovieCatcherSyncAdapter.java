@@ -31,7 +31,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.SocketException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.Vector;
 
 import static com.itcherry.themoviecatcher.data.MovieContract.COLUMN_ID;
@@ -58,6 +60,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
     public static final long SYNC_FLEXTIME = SYNC_INTERVAL / 3;
     public static final String SYNC_FINISHED = "sync_finished";
     public static final String SYNC_ERROR_INTENT_EXTRA = "sync_error";
+
     /**
      * Take the String representing the complete forecast in JSON Format and
      * pull out the data we need to construct the Strings needed for the wireframes.
@@ -105,17 +108,26 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
                 cVVector.add(cv);
 
                 String imageUrl = object.getString(POSTER_IMAGE_URL);
-                if(!MovieContract.getDirForImages(imageUrl,getContext()).exists()) {
-                    Bitmap bitmap = Picasso.with(getContext())
-                            .load(MovieContract.URL_PICTURE + imageUrl)
-                            .get();
-                    FileOutputStream streamWriter = new FileOutputStream(
-                            getDirForImages(imageUrl, getContext())
-                    );
+                if (!MovieContract.getDirForImages(imageUrl, getContext()).exists()) {
+                    try {
+                        Bitmap bitmap = Picasso.with(getContext())
+                                .load(MovieContract.URL_PICTURE + imageUrl)
+                                .get();
 
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, streamWriter);
-                    streamWriter.flush();
-                    streamWriter.close();
+                        FileOutputStream streamWriter = new FileOutputStream(
+                                getDirForImages(imageUrl, getContext())
+                        );
+
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, streamWriter);
+                        streamWriter.flush();
+                        streamWriter.close();
+                    } catch (SocketException | UnknownHostException e) {
+                        e.printStackTrace();
+                        Intent intent = new Intent(SYNC_FINISHED);
+                        intent.putExtra(SYNC_ERROR_INTENT_EXTRA, true);
+                        getContext().sendBroadcast(intent);
+                    }
+
                 }
             }
 
@@ -141,7 +153,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
         Bundle bundle = new Bundle();
         bundle.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
         bundle.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
-        bundle.putInt(context.getString(R.string.bundle_page_key),page);
+        bundle.putInt(context.getString(R.string.bundle_page_key), page);
         Account account = getSyncAccount(context);
         ContentResolver.requestSync(account,
                 context.getString(R.string.content_authority), bundle);
@@ -165,7 +177,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
         final String PAGE = "page";
 
         String page = String.valueOf(
-                extras.getInt(getContext().getString(R.string.bundle_page_key),1));
+                extras.getInt(getContext().getString(R.string.bundle_page_key), 1));
         try {
             Uri uri = Uri.parse(MOVIE_BASE_URL).buildUpon()
                     .appendQueryParameter(SORTING, "vote_average.desc")
@@ -184,7 +196,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
             if (inputStream == null) {
                 // Nothing to do.
                 Intent intent = new Intent(SYNC_FINISHED);
-                intent.putExtra(SYNC_ERROR_INTENT_EXTRA,true);
+                intent.putExtra(SYNC_ERROR_INTENT_EXTRA, true);
                 getContext().sendBroadcast(intent);
                 return;
             }
@@ -201,7 +213,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
             if (buffer.length() == 0) {
                 // Stream was empty.  No point in parsing.
                 Intent intent = new Intent(SYNC_FINISHED);
-                intent.putExtra(SYNC_ERROR_INTENT_EXTRA,true);
+                intent.putExtra(SYNC_ERROR_INTENT_EXTRA, true);
                 getContext().sendBroadcast(intent);
                 return;
             }
@@ -210,7 +222,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
         } catch (IOException e) {
             Log.e(LOG_TAG, e.getMessage());
             Intent intent = new Intent(SYNC_FINISHED);
-            intent.putExtra(SYNC_ERROR_INTENT_EXTRA,true);
+            intent.putExtra(SYNC_ERROR_INTENT_EXTRA, true);
             getContext().sendBroadcast(intent);
             return;
         } finally {
@@ -225,11 +237,10 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
                 }
             }
         }
-        getMoviesFromJsonString(postersJsonStr,page);
+        getMoviesFromJsonString(postersJsonStr, page);
         Intent intent = new Intent(SYNC_FINISHED);
         getContext().sendBroadcast(intent);
     }
-
 
 
     /**
@@ -266,7 +277,7 @@ public class MovieCatcherSyncAdapter extends AbstractThreadedSyncAdapter {
         /*
          * Finally, let's do a sync to get things started
          */
-        syncImmediately(context,20);
+        syncImmediately(context, 20);
     }
 
     public static void initializeSyncAdapter(Context context) {

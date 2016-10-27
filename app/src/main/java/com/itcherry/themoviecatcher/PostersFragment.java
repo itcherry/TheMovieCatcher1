@@ -2,6 +2,7 @@ package com.itcherry.themoviecatcher;
 
 
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -22,6 +23,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.GridView;
 import android.widget.Toast;
 
@@ -45,6 +47,9 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
     private int lastRowQuantity;
     private IntentFilter mNetworkChangeIntentFilter;
 
+
+    private int mLastFirstVisibleItem;
+    private boolean mIsScrollingUp;
     //private SyncFinishedReceiver syncFinishedReceiver;
 
     public PostersFragment() {
@@ -74,20 +79,28 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
         Log.d("LOG_TAG", "onDestroyFragment");
         getActivity().unregisterReceiver(syncFinishedReceiver);
         getActivity().unregisterReceiver(networkChangeReceiver);
+       /* if(!getUpdateFlag()){
+            Utility.setPageQuantityFromPreferences(getActivity(),lastPage-1);
+            Utility.setRowQuantityFromPreferences(getActivity(),lastRowQuantity - 20);
+        }*/
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        Utility.setPageQuantityFromPreferences(getActivity(), lastPage);
-        Utility.setRowQuantityFromPreferences(getActivity(), lastRowQuantity);
+        if (!getUpdateFlag()) {
+            Utility.setPageQuantityFromPreferences(getActivity(), lastPage - 1);
+            Utility.setRowQuantityFromPreferences(getActivity(), lastRowQuantity - 20);
+        } else {
+            Utility.setPageQuantityFromPreferences(getActivity(), lastPage);
+            Utility.setRowQuantityFromPreferences(getActivity(), lastRowQuantity);
+        }
         outState.putBoolean(getActivity().getString(R.string.pref_last_update_flag), updateFlag);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-
         // Inflate the layout for this fragment
         Log.d("LOG_TAG", "onCreateVIew");
         View v = inflater.inflate(R.layout.fragment_posters, container, false);
@@ -103,7 +116,7 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
                 sortOrder
         );
 
-        gridView.setEmptyView(Utility.getEmptyView(getActivity(),getActivity().getLayoutInflater(), container));
+        gridView.setEmptyView(Utility.getEmptyView(getActivity(), getActivity().getLayoutInflater(), container));
 
         mMovieAdapter = new ImageAdapter(getActivity(), cursor, false);
         gridView.setAdapter(mMovieAdapter);
@@ -138,15 +151,31 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
                 }
             }
         });
+        final Button floatingButton = (Button) v.findViewById(R.id.floating_button);
+
+        // floatingButton.startAnimation();
         gridView.setOnScrollListener(new AbsListView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(AbsListView view, int scrollState) {
+                if (scrollState == 0)
+                    Log.i("a", "scrolling stopped...");
 
+                if (view.getId() == gridView.getId()) {
+                    final int currentFirstVisibleItem = gridView.getFirstVisiblePosition();
+                    if (currentFirstVisibleItem > mLastFirstVisibleItem) {
+                        mIsScrollingUp = false;
+                        Log.i("a", "scrolling down...");
+                    } else if (currentFirstVisibleItem < mLastFirstVisibleItem) {
+                        mIsScrollingUp = true;
+                        Log.i("a", "scrolling up...");
+                    }
+
+                    mLastFirstVisibleItem = currentFirstVisibleItem;
+                }
             }
 
             @Override
             public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
-
                 if (firstVisibleItem + visibleItemCount == totalItemCount &&
                         totalItemCount != 0 &&
                         lastRowQuantity == totalItemCount &&
@@ -168,43 +197,6 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
         return v;
     }
 
-    /*public View getEmptyView(LayoutInflater inflater, ViewGroup container) {
-        View emptyView;
-        emptyView = inflater.inflate(R.layout.no_network_layout, container, false);
-        if (Utility.isNetworkConnected(getActivity())) {
-            emptyView.findViewById(R.id.empty_layout).setVisibility(View.VISIBLE);
-            emptyView.findViewById(R.id.no_network_layout).setVisibility(View.GONE);
-        } else {
-            emptyView.findViewById(R.id.empty_layout).setVisibility(View.GONE);
-            emptyView.findViewById(R.id.no_network_layout).setVisibility(View.VISIBLE);
-
-        }
-        Button showNetworkButton = (Button) emptyView.findViewById(R.id.open_network_button);
-        showNetworkButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent();
-                intent.setClassName("com.android.settings",
-                        "com.android.settings.Settings$DataUsageSummaryActivity");
-                startActivity(intent);
-            }
-        });
-        Button showWifiButton = (Button) emptyView.findViewById(R.id.open_wifi_button);
-        showWifiButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(Settings.ACTION_WIFI_SETTINGS);
-                startActivity(intent);
-            }
-        });
-        getActivity().addContentView(emptyView,
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT)
-        );
-        return emptyView;
-    }*/
-
     public static void setUpdateFlag(boolean flag) {
         updateFlag = flag;
     }
@@ -219,10 +211,10 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
 
         getActivity().registerReceiver(syncFinishedReceiver, new IntentFilter(MovieCatcherSyncAdapter.SYNC_FINISHED));
         getActivity().registerReceiver(networkChangeReceiver, mNetworkChangeIntentFilter);
-        /*if (!getUpdateFlag() && mFooter.getVisibility() == View.GONE) {
+        if (!getUpdateFlag() && mFooter.getVisibility() == View.GONE) {
             // last item in grid not on the screen, show footer:
             mFooter.setVisibility(View.VISIBLE);
-        }*/
+        }
         getLoaderManager().restartLoader(MY_CURSOR_LOADER_ID, null, this);
     }
 
@@ -235,11 +227,21 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
                     // last item in grid not on the screen, hide footer:
                     mFooter.setVisibility(View.GONE);
                 }
-                getLoaderManager().restartLoader(MY_CURSOR_LOADER_ID, null, PostersFragment.this);
-                gridView.invalidateViews();
+
             } else {
+                ContentResolver.cancelSync(
+                        MovieCatcherSyncAdapter.getSyncAccount(
+                                getActivity()),
+                        getString(R.string.content_authority)
+                );
+                lastRowQuantity -= 20;
+                lastPage--;
+                mFooter.setVisibility(View.GONE);
+                mFooterNoNetwork.setVisibility(View.VISIBLE);
                 Toast.makeText(getActivity(), "Error while loading from server", Toast.LENGTH_SHORT).show();
             }
+            getLoaderManager().restartLoader(MY_CURSOR_LOADER_ID, null, PostersFragment.this);
+            gridView.invalidateViews();
         }
     };
     private BroadcastReceiver networkChangeReceiver = new BroadcastReceiver() {
@@ -252,7 +254,7 @@ public class PostersFragment extends Fragment implements LoaderManager.LoaderCal
                     mFooterNoNetwork.setVisibility(View.GONE);
                     mFooter.setVisibility(View.VISIBLE);
                     setUpdateFlag(true);
-                    getLoaderManager().restartLoader(MY_CURSOR_LOADER_ID,null,PostersFragment.this);
+                    getLoaderManager().restartLoader(MY_CURSOR_LOADER_ID, null, PostersFragment.this);
                 } else {
                     MovieCatcherSyncAdapter.syncImmediately(getActivity(), 1);
                 }

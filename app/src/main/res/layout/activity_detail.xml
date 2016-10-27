@@ -19,6 +19,15 @@
             android:padding="3dp">
 
         </android.support.v4.view.ViewPager>
+        <ProgressBar
+            android:id="@+id/no_network_pb_detail_activity"
+            android:layout_width="match_parent"
+            android:layout_height="225dp"
+            android:background="@color/dim_foreground_disabled_material_light"
+            android:elevation="5dp"
+            android:padding="3dp">
+
+        </ProgressBar>
 
         <FrameLayout
             xmlns:tools="http://schemas.android.com/tools"
