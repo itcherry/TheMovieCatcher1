@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/menu_favourite_star"
+        android:title="@string/menu_favourite_title"
+        android:checkable="true"
+        android:checked="false"
+        app:actionLayout="@layout/layout_favourite_star"
+        app:showAsAction="always"/>
+
+</menu>
